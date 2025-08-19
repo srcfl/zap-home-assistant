@@ -1,14 +1,10 @@
 """OBIS mappings."""
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import (
-    UnitOfElectricCurrent,
-    UnitOfElectricPotential,
-    UnitOfReactivePower,
-    UnitOfReactiveEnergy,
-    UnitOfEnergy,
-    UnitOfPower,
-)
+from homeassistant.const import (UnitOfElectricCurrent,
+                                 UnitOfElectricPotential, UnitOfEnergy,
+                                 UnitOfPower, UnitOfReactiveEnergy,
+                                 UnitOfReactivePower)
 
 SENSOR_DEFINITIONS = {
     "1-0:1.8.0": {

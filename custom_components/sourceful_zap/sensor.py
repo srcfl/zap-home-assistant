@@ -5,30 +5,13 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import voluptuous as vol
-
-from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_SCAN_INTERVAL, UnitOfPower
+from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
+                                             SensorStateClass)
+from homeassistant.const import UnitOfPower
 from homeassistant.core import HomeAssistant
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import (
-    CONF_ENDPOINT,
-    CONF_SYSTEM_ENDPOINT,
-    DEFAULT_ENDPOINT,
-    DEFAULT_HOST,
-    DEFAULT_NAME,
-    DEFAULT_SCAN_INTERVAL,
-    DEFAULT_SYSTEM_ENDPOINT,
-    DOMAIN,
-)
+from .const import DEFAULT_NAME, DOMAIN
 from .obis_definitions import SENSOR_DEFINITIONS
 from .p1_coordinator import P1DataCoordinator
 from .p1_sensor import P1Sensor
@@ -38,42 +21,41 @@ from .system_sensor_definitions import SYSTEM_SENSOR_DEFINITIONS
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_HOST, default=DEFAULT_HOST): cv.string,
-        vol.Optional(CONF_ENDPOINT, default=DEFAULT_ENDPOINT): cv.string,
-        vol.Optional(CONF_SYSTEM_ENDPOINT, default=DEFAULT_SYSTEM_ENDPOINT): cv.string,
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
-    }
-)
+# PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+#     {
+#         vol.Required(CONF_HOST, default=DEFAULT_HOST): cv.string,
+#         vol.Optional(CONF_ENDPOINT, default=DEFAULT_ENDPOINT): cv.string,
+#         vol.Optional(CONF_SYSTEM_ENDPOINT, default=DEFAULT_SYSTEM_ENDPOINT): cv.string,
+#         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+#         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
+#     }
+# )
 
 
-async def async_setup_platform(
-    hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+# REMOVE async_setup_platform
+# ADD this instead:
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up the P1 Reader sensors."""
-    _LOGGER.debug("Setting up P1 Reader sensors")
+    """Set up Sourceful Zap sensors from config entry."""
+    _LOGGER.debug("Setting up Sourceful Zap sensors via config flow")
 
-    # Get configuration
-    host = config.get(CONF_HOST)
-    endpoint = config.get(CONF_ENDPOINT)
-    system_endpoint = config.get(CONF_SYSTEM_ENDPOINT)
-    name = config.get(CONF_NAME)
-    scan_interval = config.get(CONF_SCAN_INTERVAL)
+    host = entry.data.get("host")
+    endpoint = entry.data.get("p1_endpoint")
+    system_endpoint = entry.data.get("system_endpoint")
+    name = entry.data.get("name")
+    scan_interval = entry.data.get("scan_interval")
 
     p1_url = f"http://{host}{endpoint}"
     system_url = f"http://{host}{system_endpoint}"
 
-    # Create data coordinators
     p1_coordinator = P1DataCoordinator(hass, p1_url, scan_interval)
     system_coordinator = SystemDataCoordinator(hass, system_url, scan_interval)
 
-    # Create P1 sensors
     sensors = []
+
     for obis_code, definition in SENSOR_DEFINITIONS.items():
         sensors.append(
             P1Sensor(
@@ -89,10 +71,8 @@ async def async_setup_platform(
             )
         )
 
-    # Add net power sensor (calculated)
     sensors.append(P1NetPowerSensor(p1_coordinator, system_coordinator, name))
 
-    # Create system sensors
     for sensor_key, definition in SYSTEM_SENSOR_DEFINITIONS.items():
         sensors.append(
             SystemSensor(

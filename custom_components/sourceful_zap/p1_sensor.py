@@ -3,11 +3,8 @@
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
+                                             SensorStateClass)
 
 from .const import DEFAULT_NAME, DOMAIN
 from .p1_coordinator import P1DataCoordinator
