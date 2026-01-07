@@ -1,20 +1,27 @@
 # Sourceful Energy Zap Home Assistant Custom Component
 
-> **🚀 Community Reference Implementation**
-> 
-> This HACS-compatible integration is a **reference implementation** created by Sourceful Energy. While fully functional, we're opening it to the community to help us reach Home Assistant core standards.
-> 
-> **Current Status:**
-> - ✅ Fully working with HACS
-> - ✅ 35+ sensors from OBIS codes  
-> - ✅ Energy Dashboard compatible
-> - 🎯 Goal: Home Assistant core inclusion
-> 
-> **Help us reach official status!** See [Contributing & Earning Grants](#contributing--earning-grants) for opportunities.
+> **⚠️ LEGACY VERSION - NEW INTEGRATION COMING**
+>
+> This integration is functional but considered **legacy**. A new official integration will replace this one, built from scratch with the updated Zap REST API.
+>
+> **Status:**
+> - ✅ Works with HACS for current users
+> - ⚠️ No longer actively developed
+> - 🚧 **New integration coming** - will replace this with proper multi-device support, config flow, and full HA core compliance
+>
+> **Existing users:** This integration will continue to work. The legacy code is preserved in the `legacy-v0.1` branch.
+>
+> **Want to contribute?** Join us on [Discord](https://discord.com/invite/srcful) - we're building the new integration once the updated REST API docs are released.
 
 ## About This Implementation
 
-A custom component for Home Assistant that integrates with the [Sourceful Energy Zap](https://sourceful.energy/store/sourceful-energy-zap) P1 meter reader. This implementation works well but needs community contributions to meet Home Assistant core standards.
+A custom component for Home Assistant that integrates with the [Sourceful Energy Zap](https://sourceful.energy/store/sourceful-energy-zap) P1 meter reader.
+
+**Note:** This is a legacy reference implementation. While functional, a new integration is being developed that will:
+- Use the updated Zap REST API
+- Have proper config flow (UI configuration)
+- Support multiple Zap devices
+- Meet Home Assistant core inclusion standards from day one
 
 The Sourceful Energy Zap is a P1 meter reader that gives you unprecedented clarity of your energy consumption to help reduce your bills. Made by [Sourceful Labs AB](https://sourceful.energy) in Kalmar, Sweden 🇸🇪, it's designed for European smart meters with standard P1 RJ12 ports.
 
@@ -293,67 +300,32 @@ Or check the log file directly:
 grep sourceful_zap home-assistant.log
 ```
 
-## Contributing & Earning Grants
+## Contributing
 
-### 🎯 Path to Home Assistant Core
+> **Note:** This legacy integration is no longer accepting new feature contributions. A new integration is being built from scratch.
 
-We need help with these specific improvements to reach official integration status:
+### Want to Help with the New Integration?
 
-1. **Config Flow Implementation**
-   - Convert from YAML to UI configuration
-   - Add device discovery via mDNS/SSDP
-   - Implement proper config validation
-   - See [HA Config Flow docs](https://developers.home-assistant.io/docs/config_entries_config_flow_handler)
+The new Zap Home Assistant integration will be developed fresh with:
+- Updated REST API (docs coming soon)
+- Config flow from day one
+- Multi-device support built-in
+- Full test coverage
+- Home Assistant core compliance
 
-2. **Multi-Device Support**
-   - Support multiple Zap devices per installation
-   - Unique entity naming per device
-   - Proper device management
+**How to get involved:**
+1. Join our [Discord](https://discord.com/invite/srcful)
+2. Watch this repo - the new integration will replace the legacy code here
 
-3. **Test Coverage**
-   - Add pytest tests with 80%+ coverage
-   - Test all sensor types
-   - Mock API responses
-   - Error condition testing
+### About This Legacy Version
 
-4. **DataUpdateCoordinator Migration**
-   - Convert to official DataUpdateCoordinator pattern
-   - Implement proper error handling
-   - Add connection state management
+This integration works but has known technical debt:
+- YAML-only configuration
+- Single device support
+- No tests
+- Basic polling pattern
 
-5. **Quality Scale Requirements** 
-   - Add diagnostics support
-   - Implement proper logging
-   - Add repair suggestions
-   - Follow [Integration Quality Scale](https://developers.home-assistant.io/docs/integration_quality_scale_index)
-
-### 💰 How to Contribute & Earn
-
-1. **Check our [GitHub Issues](https://github.com/srcfl/zap-home-assistant/issues)** for open tasks
-2. **Comment on an issue** to claim it (first come, first served)
-3. **Fork and implement** following HA development guidelines
-4. **Submit a PR** with tests and documentation
-5. **Get paid** via our [Spark Initiative](https://sourceful.energy/grants)
-
-### 🎮 Development Guidelines
-
-This is a simple P1 meter reader. Keep contributions focused:
-- Read OBIS codes from `/api/data/p1/obis`
-- Parse and present as sensors
-- Integrate with Energy Dashboard
-- Keep it lean and reliable
-
-No need for complex features - just solid, reliable meter reading that meets Home Assistant standards.
-
-### 🔧 Technical Debt
-
-Current implementation uses:
-- ❌ YAML configuration (needs config flow)
-- ❌ Basic polling (works fine, but could use DataUpdateCoordinator)
-- ❌ No tests (critical for core inclusion)
-- ❌ Single device only
-
-Each item above is an opportunity to contribute and earn grants!
+These issues will be addressed in the new integration rather than patching this one.
 
 ## Development
 
@@ -397,44 +369,15 @@ python -m black custom_components/
 4. Configure with your Zap device details
 5. Test functionality and sensor updates
 
-## Why This Matters
-
-Getting this integration into Home Assistant core means:
-- ✅ No manual installation needed
-- ✅ Automatic updates with HA releases  
-- ✅ Better visibility for Zap users
-- ✅ Professional validation of the integration
-- ✅ Easier onboarding for new Sourceful Energy customers
-
-## Version History
-
-- **v0.1.0**: Initial reference implementation (current)
-  - Basic OBIS reading via YAML config
-  - HACS compatible
-  - Single device support
-  - **Target**: v1.0 for Home Assistant core submission
-
-## Contributing
-
-1. **Check [GitHub Issues](https://github.com/srcfl/zap-home-assistant/issues)** for available tasks
-2. **Comment on an issue** to claim it  
-3. **Fork the repository** and create a feature branch
-4. **Follow HA development guidelines** and add tests
-5. **Submit a pull request** with documentation
-6. **Earn grants** through our [Spark Initiative](https://sourceful.energy/grants)
-
-See [Contributing & Earning Grants](#contributing--earning-grants) section above for detailed guidelines.
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support & Community
 
-- **Discord**: Join [#dev channel](https://discord.com/invite/srcful) to discuss contributions
-- **Issues**: Check [open issues](https://github.com/srcfl/zap-home-assistant/issues) for tasks
-- **Grants**: Earn USDC at [sourceful.energy/grants](https://sourceful.energy/grants)
-- **Discussions**: Use GitHub Discussions for general questions
+- **Discord**: Join [#dev channel](https://discord.com/invite/srcful) for updates on the new integration
+- **Issues**: Report bugs with the legacy integration
+- **New Integration**: Watch this repo for announcements
 
 ## Credits
 
@@ -447,7 +390,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Version History
 
-- **0.1.0**: Initial release with basic P1 Reader support
-- Support for all standard OBIS codes
-- Energy Dashboard integration
-- Per-phase monitoring capabilities 
+- **0.1.0** (Legacy): Initial release with basic P1 Reader support
+  - Support for all standard OBIS codes
+  - Energy Dashboard integration
+  - Per-phase monitoring capabilities
+  - *Note: This version is now in maintenance mode. A new integration is being developed.* 
