@@ -1,74 +1,56 @@
-# CLAUDE.md - Sourceful Zap Home Assistant Integration
+# CLAUDE.md
 
-## What is the Zap?
+## Project
 
-The Zap is Sourceful's **universal local coordination gateway** - a ~$20 ESP32-based device that provides the missing layer between cloud platforms and physical energy devices.
+Home Assistant integration for the Sourceful Zap gateway. Targeting HA Core inclusion at Bronze tier.
 
-**The coordination gap:** Cloud APIs respond in 2-5 seconds. The grid needs millisecond response. This gap crashed the Iberian grid in April 2025. Local execution is the only architecture that works.
+## The Zap
 
-## Protocols
+ESP32-based local coordination gateway (~$20 BOM). Enables <200ms device control vs 2-5s cloud latency.
 
-| Protocol | Use Case |
-|----------|----------|
-| P1 | European smart meters |
-| Modbus TCP | Inverters, batteries |
-| Modbus RTU (RS-485) | Direct serial control |
-| MQTT | Local IoT |
-| OCPP | EV charging |
-| REST API | Full device control (docs coming) |
+**Protocols:** P1, Modbus TCP/RTU, MQTT, OCPP, REST API (docs pending)
 
-## Repository State
+## HA Integration Standards
 
-- `main` - Clean, ready for new integration
-- `legacy-v0.1` - Working P1-only integration (preserved)
+Follow official docs - don't reinvent:
 
-## New Integration Architecture
+| Component | Documentation |
+|-----------|---------------|
+| Structure | [File Structure](https://developers.home-assistant.io/docs/creating_integration_file_structure/) |
+| Manifest | [Manifest](https://developers.home-assistant.io/docs/creating_integration_manifest/) |
+| Config Flow | [Config Entries](https://developers.home-assistant.io/docs/config_entries_config_flow_handler/) |
+| Data Fetching | [DataUpdateCoordinator](https://developers.home-assistant.io/docs/integration_fetching_data/) |
+| Entities | [Entity](https://developers.home-assistant.io/docs/core/entity/) |
+| Testing | [Testing](https://developers.home-assistant.io/docs/development_testing/) |
+| Quality Scale | [Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/) |
+
+## Bronze Tier Checklist
+
+Minimum for Core inclusion:
+
+- [ ] Config flow (no YAML)
+- [ ] Proper entity naming
+- [ ] DataUpdateCoordinator
+- [ ] Error handling
+- [ ] Tests with >80% coverage
+- [ ] Translations (strings.json)
+- [ ] Diagnostics support
+
+## Device API
 
 ```
-custom_components/sourceful_zap/
-├── __init__.py           # Config entry setup
-├── config_flow.py        # UI configuration
-├── coordinator.py        # DataUpdateCoordinator
-├── sensor.py             # Sensor entities
-├── switch.py             # Control entities
-├── const.py              # Constants
-├── strings.json          # Translations
-└── protocols/
-    ├── p1.py             # P1 meter reading
-    ├── modbus_tcp.py     # Modbus TCP
-    ├── modbus_rtu.py     # Modbus RTU
-    ├── mqtt.py           # MQTT
-    └── rest.py           # REST API
+GET /api/system          # Device info
+GET /api/data/p1/obis    # P1 meter data (legacy)
+# REST API docs pending from @damo
 ```
 
-## Key Principles
+## Branches
 
-1. **Physics before code** - Grid needs millisecond response
-2. **Local over cloud** - Default to local, cloud is opt-in
-3. **Simple over clever** - If proud of cleverness, simplify
-4. **Edge control <200ms** - Non-negotiable
+- `main` - New integration (WIP)
+- `legacy-v0.1` - Working P1-only integration
 
-## Device APIs
+## Principles
 
-**System info:**
-```
-GET /api/system
-```
-
-**P1 data (legacy):**
-```
-GET /api/data/p1/obis
-```
-
-**New REST API:** Docs coming from @damo
-
-## Context
-
-The energy grid must balance every second. With 50M+ distributed energy resources across Europe, coordination is critical. Cloud APIs are too slow.
-
-The Zap is the local execution layer enabling:
-- Fast Frequency Response (sub-second)
-- V2G coordination
-- Grid services that actually pay
-
-Read: "The Coordination Gap" whitepaper
+1. Physics before code - <200ms edge control is non-negotiable
+2. Local over cloud - Default local, cloud opt-in
+3. Follow HA patterns - Don't be clever, be standard

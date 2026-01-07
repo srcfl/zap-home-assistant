@@ -1,98 +1,93 @@
 # Sourceful Zap - Home Assistant Integration
 
-> **🚧 NEW INTEGRATION COMING**
->
-> This repo is being prepared for a new integration built from scratch.
->
-> **Looking for the working P1 integration?** → Use the [`legacy-v0.1`](https://github.com/srcfl/zap-home-assistant/tree/legacy-v0.1) branch
+[![hacs][hacs-badge]][hacs-url]
+[![Project Status: WIP][status-badge]][status-url]
 
-## What is the Zap?
+Home Assistant integration for the **Sourceful Zap** - a local coordination gateway for distributed energy resources.
 
-The **Sourceful Zap** is a ~$20 ESP32-based gateway that provides the missing layer between cloud platforms and physical energy devices. It enables **millisecond-level local control** that cloud APIs simply cannot achieve.
+> **Status:** In development. Targeting [Home Assistant Core](https://developers.home-assistant.io/docs/creating_component_index/) inclusion with [Bronze tier](https://developers.home-assistant.io/docs/core/integration-quality-scale/) quality scale.
 
-**The Zap is NOT just a P1 reader** - it's a universal local coordination gateway.
+## About the Zap
 
-```
-THE COORDINATION GAP:
+The Zap is a ~$20 ESP32-based gateway enabling **local energy coordination** with <200ms response times - critical for grid services that cloud APIs (2-5s latency) cannot support.
 
-┌─────────────┐
-│   Cloud     │  ← 2-5 second response (too slow for grid services)
-│   Platforms │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│    ZAP      │  ← LOCAL EXECUTION LAYER
-│  Gateway    │     <200ms response
-│             │     Works offline
-│             │     Real device control
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Devices    │  ← Inverters, batteries, EVs, meters
-└─────────────┘
+**Supported protocols:** P1 · Modbus TCP/RTU · MQTT · OCPP · REST API
+
+Learn more: [sourceful.energy](https://sourceful.energy)
+
+## Installation
+
+### HACS (Coming Soon)
+
+Once published, install via [HACS](https://hacs.xyz/).
+
+### Manual
+
+```bash
+# Clone to custom_components
+cd ~/.homeassistant/custom_components
+git clone https://github.com/srcfl/zap-home-assistant.git sourceful_zap
 ```
 
-### Protocols Supported
+### Legacy P1 Integration
 
-| Protocol | Use Case |
-|----------|----------|
-| **P1** | European smart meters (180M+ installed) |
-| **Modbus TCP** | Inverters, batteries, industrial equipment |
-| **Modbus RTU (RS-485)** | Direct serial device control |
-| **MQTT** | Local IoT communication |
-| **OCPP** | EV charging stations |
-| **REST API** | Coming soon - full device control |
+For the working P1-only integration, use the [`legacy-v0.1`](https://github.com/srcfl/zap-home-assistant/tree/legacy-v0.1) branch.
 
-### Why Local Execution Matters
+## Development
 
-The grid must balance **every second**. Cloud APIs respond in 2-5 seconds minimum. That gap crashed the Iberian grid in April 2025 - 15GW disappeared in 5 seconds, 60 million people lost power.
+This integration follows [Home Assistant development guidelines](https://developers.home-assistant.io/docs/development_index/).
 
-**Local execution is the only architecture that works for:**
-- Fast Frequency Response (sub-second)
-- V2G coordination (real-time)
-- Grid services that actually pay
+### Requirements
 
-## Status
+| Requirement | Reference |
+|-------------|-----------|
+| Config Flow | [Config Entries](https://developers.home-assistant.io/docs/config_entries_config_flow_handler/) |
+| Coordinator | [DataUpdateCoordinator](https://developers.home-assistant.io/docs/integration_fetching_data/) |
+| Translations | [Internationalization](https://developers.home-assistant.io/docs/internationalization/) |
+| Tests | [Testing](https://developers.home-assistant.io/docs/development_testing/) |
+| Quality Scale | [Bronze tier minimum](https://developers.home-assistant.io/docs/core/integration-quality-scale/) |
 
-| What | Where |
-|------|-------|
-| **Legacy P1 integration** | [`legacy-v0.1` branch](https://github.com/srcfl/zap-home-assistant/tree/legacy-v0.1) |
-| **New integration** | Coming to `main` when REST API docs are ready |
+### Structure
 
-## New Integration Goals
+```
+custom_components/sourceful_zap/
+├── __init__.py          # Integration setup
+├── manifest.json        # Integration metadata
+├── config_flow.py       # UI configuration
+├── coordinator.py       # Data fetching
+├── sensor.py            # Sensor entities
+├── const.py             # Constants
+├── strings.json         # Translations
+└── translations/        # Localized strings
+```
 
-The new integration will support the full Zap capability:
+See [File Structure](https://developers.home-assistant.io/docs/creating_integration_file_structure/) and [Manifest](https://developers.home-assistant.io/docs/creating_integration_manifest/) docs.
 
-- **Config Flow** - UI-based setup, no YAML
-- **Multi-device** - Multiple Zaps per installation
-- **Multi-protocol** - P1, Modbus, MQTT, REST
-- **Device Registry** - Proper HA device/entity management
-- **Diagnostics** - Built-in troubleshooting
-- **Full test coverage** - Ready for HA core submission
+### Local Development
 
-## Get Involved
+```bash
+# Set up dev environment
+python -m venv venv
+source venv/bin/activate
+pip install homeassistant
 
-- **Discord**: [#dev channel](https://discord.com/invite/srcful)
-- **API Docs**: Coming soon
-- **Whitepaper**: [The Coordination Gap](https://sourceful.energy)
+# Run tests
+pytest tests/
+```
 
-## About Sourceful
+## Contributing
 
-Sourceful is building **Local Coordination Infrastructure** - the physical rails that make distributed energy work. The Zap enables millisecond control at the edge, creating value from 50+ million distributed energy resources across Europe.
-
-**This isn't software optimization. It's infrastructure.**
-
-Learn more at [sourceful.energy](https://sourceful.energy)
-
----
-
-## Credits
-
-- **Sourceful Labs AB** - Kalmar, Sweden 🇸🇪
-- Thanks to community contributors: @erikarenhill, @Vamsi-aki
+Join the discussion on [Discord](https://discord.com/invite/srcful).
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+MIT - see [LICENSE](LICENSE)
+
+---
+
+**Sourceful Labs AB** · Kalmar, Sweden 🇸🇪
+
+[hacs-badge]: https://img.shields.io/badge/HACS-Custom-orange.svg
+[hacs-url]: https://hacs.xyz/
+[status-badge]: https://img.shields.io/badge/status-WIP-yellow.svg
+[status-url]: https://github.com/srcfl/zap-home-assistant
