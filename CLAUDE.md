@@ -1,91 +1,108 @@
 # CLAUDE.md - Sourceful Zap Home Assistant Integration
 
-## Status: LEGACY
+## What is the Zap?
 
-This integration is functional but in **maintenance mode**. A new integration is being developed from scratch with the updated Zap REST API.
+The Zap is NOT just a P1 reader. It's Sourceful's **universal local coordination gateway** - a ~$20 ESP32-based device that provides the missing layer between cloud platforms and physical energy devices.
 
-**Do not add new features to this codebase.** Only critical bug fixes should be considered.
+**The coordination gap:** Cloud APIs respond in 2-5 seconds. The grid needs millisecond response. This gap crashed the Iberian grid in April 2025. Local execution is the only architecture that works.
 
-## What This Is
+## Protocols
 
-A Home Assistant custom integration for the **Sourceful Energy Zap** P1 meter reader. Reads smart meter data via local HTTP API and creates 35+ sensors for energy monitoring.
+| Protocol | Use Case | Status |
+|----------|----------|--------|
+| P1 | European smart meters | ✅ Legacy support |
+| Modbus TCP | Inverters, batteries | 🚧 New integration |
+| Modbus RTU (RS-485) | Direct serial control | 🚧 New integration |
+| MQTT | Local IoT | 🚧 New integration |
+| OCPP | EV charging | 🚧 Future |
+| REST API | Full device control | 🚧 Docs coming |
 
-## Quick Commands
+## Repository Structure
 
-```bash
-# Validate locally
-python validate.py
-
-# Format code
-python -m black custom_components/
+```
+├── custom_components/sourceful_zap/  # Legacy P1-only integration
+├── legacy-v0.1 branch                # Preserved legacy code
+└── main branch                       # New multi-protocol integration
 ```
 
-## Architecture
+## Legacy Code (P1 Only)
+
+The `legacy-v0.1` branch contains the working P1-only integration:
+- YAML platform configuration
+- P1 OBIS code parsing
+- 35+ sensors for energy monitoring
+- Works with HACS
+
+**Do not add features to legacy.** The new integration will replace it.
+
+## New Integration Architecture (Planned)
 
 ```
 custom_components/sourceful_zap/
-├── __init__.py              # HA setup/teardown entry points
-├── manifest.json            # Integration metadata
-├── const.py                 # Constants (domain, defaults)
-├── sensor.py                # Platform setup, creates all sensors
-├── p1_coordinator.py        # Fetches P1 data from /api/data/p1/obis
-├── p1_sensor.py             # P1 sensor entity class
-├── system_data_coordinator.py  # Fetches system info from /api/system
-├── system_sensor.py         # System sensor entity class
-├── obis_definitions.py      # OBIS code → sensor mappings (25 sensors)
-└── system_sensor_definitions.py  # System sensor definitions (12 sensors)
+├── __init__.py           # Config entry setup
+├── config_flow.py        # UI configuration
+├── coordinator.py        # DataUpdateCoordinator
+├── sensor.py             # Sensor entities
+├── switch.py             # Control entities (Modbus write)
+├── const.py              # Constants
+├── protocols/
+│   ├── p1.py             # P1 meter reading
+│   ├── modbus_tcp.py     # Modbus TCP client
+│   ├── modbus_rtu.py     # Modbus RTU (RS-485)
+│   ├── mqtt.py           # MQTT integration
+│   └── rest.py           # REST API client
+└── strings.json          # Translations
 ```
 
-### Data Flow
+## Development Commands
 
-1. **P1DataCoordinator** polls `http://{host}/api/data/p1/obis` every scan_interval
-2. OBIS codes are parsed via regex from the response
-3. **P1Sensor** entities read values from coordinator data
-4. **SystemDataCoordinator** polls `http://{host}/api/system` for device info
-5. **SystemSensor** entities expose device diagnostics
+```bash
+# Format
+python -m black custom_components/
 
-### Key Patterns
+# Lint
+python -m flake8 custom_components/
+python -m pylint custom_components/
 
-- **Local polling only** - no cloud dependency
-- **Coordinator pattern** - single fetch serves multiple sensors
-- **YAML platform config** - legacy pattern, not config flow
-- **No external dependencies** - uses only HA built-ins
+# Type check
+python -m mypy custom_components/
 
-## Known Technical Debt (Not Being Fixed Here)
-
-These will be addressed in the new integration:
-
-- YAML-only configuration (no config flow)
-- Single device support only
-- No tests
-- Manual Throttle instead of DataUpdateCoordinator
-- No diagnostics support
-
-## Device API
-
-**P1 Data**: `GET /api/data/p1/obis`
-```json
-{
-  "status": "success",
-  "data": ["1-0:1.8.0(00061825.061*kWh)", ...]
-}
+# Validate
+python validate.py
 ```
 
-**System Info**: `GET /api/system`
-```json
-{
-  "temperature_celsius": 31.2,
-  "zap": { "deviceId": "...", "firmwareVersion": "0.1.4" }
-}
+## Device APIs
+
+**Legacy P1 endpoint:**
+```
+GET /api/data/p1/obis
+→ OBIS codes from smart meter
 ```
 
-## New Integration Plans
+**System info:**
+```
+GET /api/system
+→ Device ID, firmware, temp, WiFi, memory
+```
 
-A new integration will replace this one, built from scratch with:
-- Updated REST API (docs coming from @damo)
-- Config flow from day one
-- Multi-device support built-in
-- Full test coverage
-- Home Assistant core compliance from the start
+**New REST API:** Documentation coming from @damo
 
-The legacy code is preserved in the `legacy-v0.1` branch.
+## Key Principles
+
+From Sourceful Engineering:
+
+1. **Physics before code** - Grid needs millisecond response, cloud can't provide it
+2. **Local over cloud** - Default to local execution, cloud is opt-in
+3. **Simple over clever** - If you're proud of how clever it is, simplify
+4. **Edge control <200ms** - Non-negotiable for grid services
+
+## Context: Why This Matters
+
+The energy grid must balance every second. With 50M+ distributed energy resources (solar, batteries, EVs) across Europe, coordination is the critical challenge. Cloud APIs are too slow.
+
+The Zap is the local execution layer that makes distributed energy work - enabling:
+- Fast Frequency Response (sub-second)
+- V2G coordination
+- Grid services that actually pay
+
+Read the whitepaper: "The Coordination Gap"
