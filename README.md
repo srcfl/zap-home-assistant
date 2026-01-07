@@ -2,13 +2,15 @@
 
 > **🚧 NEW INTEGRATION COMING**
 >
-> This integration is being rebuilt from scratch to support the full capabilities of the Sourceful Zap gateway.
+> This repo is being prepared for a new integration built from scratch.
 >
-> **The Zap is not just a P1 reader** - it's a universal local coordination gateway for distributed energy resources.
+> **Looking for the working P1 integration?** → Use the [`legacy-v0.1`](https://github.com/srcfl/zap-home-assistant/tree/legacy-v0.1) branch
 
 ## What is the Zap?
 
 The **Sourceful Zap** is a ~$20 ESP32-based gateway that provides the missing layer between cloud platforms and physical energy devices. It enables **millisecond-level local control** that cloud APIs simply cannot achieve.
+
+**The Zap is NOT just a P1 reader** - it's a universal local coordination gateway.
 
 ```
 THE COORDINATION GAP:
@@ -52,33 +54,19 @@ The grid must balance **every second**. Cloud APIs respond in 2-5 seconds minimu
 - V2G coordination (real-time)
 - Grid services that actually pay
 
-## Current Status
+## Status
 
-| Component | Status |
-|-----------|--------|
-| Legacy P1 integration | ✅ Works (see `legacy-v0.1` branch) |
-| New multi-protocol integration | 🚧 In development |
-| REST API support | 🚧 Waiting for API docs |
-| Config flow (UI setup) | 🚧 Planned |
-| Multi-device support | 🚧 Planned |
-
-## For Existing Users
-
-The legacy P1 integration continues to work. Install via HACS or see the `legacy-v0.1` branch.
-
-```yaml
-# Legacy configuration (still works)
-sensor:
-  - platform: sourceful_zap
-    host: zap.local
-```
+| What | Where |
+|------|-------|
+| **Legacy P1 integration** | [`legacy-v0.1` branch](https://github.com/srcfl/zap-home-assistant/tree/legacy-v0.1) |
+| **New integration** | Coming to `main` when REST API docs are ready |
 
 ## New Integration Goals
 
-The new integration will be built for the full Zap capability:
+The new integration will support the full Zap capability:
 
-- **Config Flow** - UI-based setup, no YAML required
-- **Multi-device** - Support multiple Zaps per installation
+- **Config Flow** - UI-based setup, no YAML
+- **Multi-device** - Multiple Zaps per installation
 - **Multi-protocol** - P1, Modbus, MQTT, REST
 - **Device Registry** - Proper HA device/entity management
 - **Diagnostics** - Built-in troubleshooting
@@ -86,63 +74,17 @@ The new integration will be built for the full Zap capability:
 
 ## Get Involved
 
-- **Discord**: [#dev channel](https://discord.com/invite/srcful) - where the action is
-- **API Docs**: Coming soon from the Sourceful team
-- **Whitepaper**: [The Coordination Gap](https://sourceful.energy) - why this matters
+- **Discord**: [#dev channel](https://discord.com/invite/srcful)
+- **API Docs**: Coming soon
+- **Whitepaper**: [The Coordination Gap](https://sourceful.energy)
 
 ## About Sourceful
 
-Sourceful is building **Local Coordination Infrastructure** - the physical rails that make distributed energy work. The Zap is the gateway that enables millisecond control at the edge, creating value from the 50+ million distributed energy resources across Europe.
+Sourceful is building **Local Coordination Infrastructure** - the physical rails that make distributed energy work. The Zap enables millisecond control at the edge, creating value from 50+ million distributed energy resources across Europe.
 
 **This isn't software optimization. It's infrastructure.**
 
 Learn more at [sourceful.energy](https://sourceful.energy)
-
----
-
-## Legacy Documentation
-
-<details>
-<summary>Click to expand legacy P1-only documentation</summary>
-
-### Legacy Installation (HACS)
-
-1. Open HACS in Home Assistant
-2. Go to "Integrations" → Custom repositories
-3. Add this repository URL, select "Integration"
-4. Search for "Sourceful Energy Zap" and install
-5. Restart Home Assistant
-
-### Legacy Configuration
-
-```yaml
-sensor:
-  - platform: sourceful_zap
-    host: zap.local
-    scan_interval: 10
-```
-
-### Legacy Sensors
-
-The P1-only integration creates 35+ sensors:
-- Energy import/export (kWh)
-- Power import/export (kW)
-- Per-phase voltage, current, power
-- Reactive power
-- Device diagnostics (temp, WiFi, uptime)
-
-### Legacy Troubleshooting
-
-1. Verify Zap is accessible: `http://zap.local/api/data/p1/obis`
-2. Check HA logs: `grep sourceful_zap home-assistant.log`
-3. Enable debug logging:
-   ```yaml
-   logger:
-     logs:
-       custom_components.sourceful_zap: debug
-   ```
-
-</details>
 
 ---
 
