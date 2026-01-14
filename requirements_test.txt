@@ -1,17 +1,14 @@
 # Testing dependencies
-pytest==8.0.2
-pytest-cov==4.1.0
-pytest-homeassistant-custom-component==0.13.106
-pytest-asyncio==0.23.5
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-homeassistant-custom-component>=0.13.45
+pytest-asyncio>=0.23.0
 
 # Code quality
-black==24.1.1
-isort==5.13.2
-pylint==3.0.3
-mypy==1.8.0
-
-# Home Assistant
-homeassistant==2024.12.0
+black>=24.1.0
+isort>=5.13.0
+pylint>=3.0.0
+mypy>=1.8.0
 
 # Integration dependencies
 aiohttp>=3.9.0
