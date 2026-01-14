@@ -1,0 +1,9 @@
+# Development dependencies
+-r requirements_test.txt
+
+# Pre-commit hooks
+pre-commit==3.6.0
+
+# Documentation
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
