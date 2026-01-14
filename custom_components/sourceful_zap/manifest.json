@@ -1,15 +1,15 @@
 {
   "domain": "sourceful_zap",
   "name": "Sourceful Zap",
-  "codeowners": ["@srcful"],
+  "codeowners": ["@srcfl"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/srcful/zap-home-assistant",
+  "documentation": "https://github.com/srcfl/zap-home-assistant",
+  "integration_type": "device",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/srcful/zap-home-assistant/issues",
+  "issue_tracker": "https://github.com/srcfl/zap-home-assistant/issues",
   "requirements": ["aiohttp>=3.9.0"],
   "version": "1.0.0",
-  "integration_type": "device",
   "zeroconf": [
     {
       "type": "_http._tcp.local.",

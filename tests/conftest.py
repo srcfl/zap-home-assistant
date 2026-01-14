@@ -1,4 +1,9 @@
-"""Common fixtures for Zap Energy tests."""
+"""Common fixtures for Zap Energy tests.
+
+Note: Tests require Linux/macOS or WSL to run properly.
+Windows is not supported due to pytest-homeassistant-custom-component
+compatibility issues with the Windows asyncio ProactorEventLoop.
+"""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
