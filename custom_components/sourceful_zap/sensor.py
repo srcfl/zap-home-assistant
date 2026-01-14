@@ -303,48 +303,6 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
         value_fn=lambda data: data.get("grid_frequency"),
         available_fn=lambda data: data.get("grid_frequency") is not None,
     ),
-    # MPPT 1 measurements
-    ZapSensorEntityDescription(
-        key="mppt1_voltage",
-        translation_key="mppt1_voltage",
-        device_class=SensorDeviceClass.VOLTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
-        suggested_display_precision=1,
-        value_fn=lambda data: data.get("mppt1_voltage"),
-        available_fn=lambda data: data.get("mppt1_voltage") is not None,
-    ),
-    ZapSensorEntityDescription(
-        key="mppt1_current",
-        translation_key="mppt1_current",
-        device_class=SensorDeviceClass.CURRENT,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
-        suggested_display_precision=2,
-        value_fn=lambda data: data.get("mppt1_current"),
-        available_fn=lambda data: data.get("mppt1_current") is not None,
-    ),
-    # MPPT 2 measurements
-    ZapSensorEntityDescription(
-        key="mppt2_voltage",
-        translation_key="mppt2_voltage",
-        device_class=SensorDeviceClass.VOLTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
-        suggested_display_precision=1,
-        value_fn=lambda data: data.get("mppt2_voltage"),
-        available_fn=lambda data: data.get("mppt2_voltage") is not None,
-    ),
-    ZapSensorEntityDescription(
-        key="mppt2_current",
-        translation_key="mppt2_current",
-        device_class=SensorDeviceClass.CURRENT,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
-        suggested_display_precision=2,
-        value_fn=lambda data: data.get("mppt2_current"),
-        available_fn=lambda data: data.get("mppt2_current") is not None,
-    ),
 )
 
 
@@ -442,30 +400,28 @@ def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
         return "battery" in der_types
 
     # === PV-only sensors ===
-    # PV has: total_generation_Wh, heatsink_C, mppt1/2_V/A
-    # PV meter has: Hz
+    # PV has: total_generation_Wh, heatsink_C
     if sensor_key == "energy_production":
         return "pv" in der_types
 
     if sensor_key == "temperature":
         return "pv" in der_types
 
+    # === Standalone meter-only sensors ===
+    # Grid frequency only available from standalone meter devices (not PV)
     if sensor_key == "grid_frequency":
-        return "pv" in der_types
+        return "meter" in der_types and "pv" not in der_types
 
-    if sensor_key in ("mppt1_voltage", "mppt1_current",
-                      "mppt2_voltage", "mppt2_current"):
-        return "pv" in der_types
-
-    # === Meter sensors (both PV and standalone meter devices) ===
-    # Both PV meter and p1_uart meter have: L1/2/3_V/A/W, total_import/export_Wh
+    # === Meter sensors (standalone meter only, NOT PV devices) ===
+    # PV devices may have embedded meter but we only use PV data for those
+    # Standalone meter (p1_uart) has: L1/2/3_V/A/W, total_import/export_Wh
     if sensor_key in ("energy_import", "energy_export"):
-        return "meter" in der_types or "pv" in der_types
+        return "meter" in der_types and "pv" not in der_types
 
     if sensor_key in ("l1_voltage", "l1_current", "l1_power",
                       "l2_voltage", "l2_current", "l2_power",
                       "l3_voltage", "l3_current", "l3_power"):
-        return "meter" in der_types or "pv" in der_types
+        return "meter" in der_types and "pv" not in der_types
 
     # === Universal sensors ===
     # Power is aggregated from all DER types

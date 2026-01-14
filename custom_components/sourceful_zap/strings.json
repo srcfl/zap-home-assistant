@@ -129,18 +129,6 @@
       },
       "grid_frequency": {
         "name": "Grid Frequency"
-      },
-      "mppt1_voltage": {
-        "name": "MPPT 1 Voltage"
-      },
-      "mppt1_current": {
-        "name": "MPPT 1 Current"
-      },
-      "mppt2_voltage": {
-        "name": "MPPT 2 Voltage"
-      },
-      "mppt2_current": {
-        "name": "MPPT 2 Current"
       }
     }
   }

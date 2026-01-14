@@ -123,11 +123,6 @@ class ZapDeviceData(TypedDict, total=False):
     battery_lower_limit: float | None
     # Battery temperature (separate from PV temperature)
     battery_temperature: float | None
-    # MPPT (Maximum Power Point Tracking) data for PV
-    mppt1_voltage: float | None
-    mppt1_current: float | None
-    mppt2_voltage: float | None
-    mppt2_current: float | None
     # PV power limits
     pv_upper_limit: float | None
     pv_lower_limit: float | None
@@ -241,45 +236,6 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 if pv_lower is not None:
                     data["pv_lower_limit"] = pv_lower
 
-                # MPPT (Maximum Power Point Tracking) data
-                # Note: Some inverters report invalid sentinel values for MPPT
-                mppt1_v = validate_numeric(
-                    pv_data.get("mppt1_V"),
-                    "pv.mppt1_V",
-                    min_value=0,
-                    max_value=1000,
-                )
-                if mppt1_v is not None:
-                    data["mppt1_voltage"] = mppt1_v
-
-                # MPPT current may be in mA or scaled, validate reasonable range
-                mppt1_a = validate_numeric(
-                    pv_data.get("mppt1_A"),
-                    "pv.mppt1_A",
-                    min_value=-100,
-                    max_value=100,
-                )
-                if mppt1_a is not None:
-                    data["mppt1_current"] = mppt1_a
-
-                mppt2_v = validate_numeric(
-                    pv_data.get("mppt2_V"),
-                    "pv.mppt2_V",
-                    min_value=0,
-                    max_value=1000,
-                )
-                if mppt2_v is not None:
-                    data["mppt2_voltage"] = mppt2_v
-
-                mppt2_a = validate_numeric(
-                    pv_data.get("mppt2_A"),
-                    "pv.mppt2_A",
-                    min_value=-100,
-                    max_value=100,
-                )
-                if mppt2_a is not None:
-                    data["mppt2_current"] = mppt2_a
-
             # Extract Battery metrics
             if "battery" in device_data:
                 battery_data = device_data["battery"]
@@ -370,8 +326,9 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 if batt_lower is not None:
                     data["battery_lower_limit"] = batt_lower
 
-            # Extract Meter metrics
-            if "meter" in device_data:
+            # Extract Meter metrics (only for standalone meter devices, not PV with embedded meter)
+            # PV devices may have an embedded meter object, but we only use PV data for those
+            if "meter" in device_data and "pv" not in device_data:
                 meter_data = device_data["meter"]
 
                 # Meter shows grid import (positive) or export (negative)

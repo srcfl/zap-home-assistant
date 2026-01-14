@@ -57,7 +57,7 @@ def mock_zap_api():
         ]
     )
 
-    # GET /api/devices/{sn}/data/json response - PV with meter
+    # GET /api/devices/{sn}/data/json response - PV only (no embedded meter data used)
     api.get_device_data = AsyncMock(
         return_value={
             "pv": {
@@ -67,33 +67,10 @@ def mock_zap_api():
                 "make": "solaredge",
                 "W": 2500,
                 "rated_power_W": 8000,
-                "mppt1_V": 350.5,
-                "mppt1_A": 7.2,
-                "mppt2_V": 345.0,
-                "mppt2_A": 6.8,
                 "heatsink_C": 45.5,
                 "total_generation_Wh": 50900524,
                 "lower_limit_W": 0,
                 "upper_limit_W": 8000,
-            },
-            "meter": {
-                "type": "meter",
-                "timestamp": 1768373017865,
-                "read_time_ms": 1826,
-                "make": "solaredge",
-                "W": -1500,
-                "Hz": 50.02,
-                "L1_V": 230.5,
-                "L1_A": 5.2,
-                "L1_W": -500,
-                "L2_V": 231.0,
-                "L2_A": 4.8,
-                "L2_W": -500,
-                "L3_V": 229.8,
-                "L3_A": 5.0,
-                "L3_W": -500,
-                "total_export_Wh": 35000000,
-                "total_import_Wh": 12000000,
             },
             "version": "v0",
             "format": "json",
