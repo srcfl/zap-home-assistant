@@ -409,8 +409,8 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             Device info dict if Zap device found, None otherwise
         """
         try:
-            # Use 3s timeout for scanning (increased for reliability)
-            api = ZapApiClient(host, self.hass, api_path=DEFAULT_API_PATH, timeout=3)
+            # Use 5s timeout for scanning (allows for slow network responses)
+            api = ZapApiClient(host, self.hass, api_path=DEFAULT_API_PATH, timeout=5)
 
             # First, verify this is a Zap device by checking /api/system
             system_info = await api.get_system_info()
