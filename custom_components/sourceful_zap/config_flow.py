@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import ipaddress
 import logging
 import socket
 from typing import Any
@@ -295,8 +294,6 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             List of discovered devices with host and name
         """
         import ipaddress
-        import asyncio
-        import socket
 
         discovered = []
 

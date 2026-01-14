@@ -58,9 +58,12 @@ def validate_numeric(
         return None
 
     # Check for values with very large exponents (like 6.5535e+06)
-    if abs(num) > 1e6 and field_name not in ("total_generation_Wh", "total_import_Wh", "total_export_Wh", "total_charge_Wh", "total_discharge_Wh"):
-        # Energy totals can legitimately be in millions of Wh
-        # But current/voltage shouldn't be
+    # Energy totals can legitimately be in millions of Wh, but current/voltage shouldn't be
+    energy_fields = (
+        "total_generation_Wh", "total_import_Wh", "total_export_Wh",
+        "total_charge_Wh", "total_discharge_Wh"
+    )
+    if abs(num) > 1e6 and field_name not in energy_fields:
         if "Wh" not in field_name:
             _LOGGER.debug("Suspicious %s value: %s (unexpectedly large)", field_name, num)
             return None

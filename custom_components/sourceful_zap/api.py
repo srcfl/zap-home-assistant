@@ -10,12 +10,6 @@ import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import (
-    API_DEVICE_DATA,
-    API_DEVICE_DERS,
-    API_DEVICES,
-    API_SYSTEM,
-)
 
 _LOGGER = logging.getLogger(__name__)
 
