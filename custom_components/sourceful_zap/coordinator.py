@@ -189,9 +189,10 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
             if "pv" in device_data:
                 pv_data = device_data["pv"]
 
-                # PV power is positive for generation
+                # PV power: Sourceful API uses negative for production, flip sign
                 pv_power = validate_numeric(pv_data.get("W"), "pv.W")
                 if pv_power is not None:
+                    pv_power = -pv_power  # Flip sign: negative API value = positive production
                     if data.get("power") is None:
                         data["power"] = pv_power
                     else:
