@@ -131,7 +131,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices: list[dict[str, Any]] = []
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
+        self, user_input: dict[str, Any] | None = None  # pylint: disable=unused-argument
     ) -> FlowResult:
         """Handle the initial step (show menu: manual or scan).
 
@@ -574,7 +574,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return ZapEnergyOptionsFlowHandler(config_entry)
 
 
-class ZapEnergyOptionsFlowHandler(config_entries.OptionsFlow):
+class ZapEnergyOptionsFlowHandler(config_entries.OptionsFlow):  # pylint: disable=too-few-public-methods
     """Handle options flow for Zap Energy integration."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:

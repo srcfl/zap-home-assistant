@@ -1,6 +1,10 @@
 [MAIN]
 ignore=tests
 
+[TYPECHECK]
+# Ignore imports from homeassistant (only available at runtime)
+ignored-modules=homeassistant,homeassistant.helpers.service_info.zeroconf
+
 [MESSAGES CONTROL]
 disable=
     too-many-branches,
@@ -12,7 +16,8 @@ disable=
     broad-exception-caught,
     no-else-return,
     too-many-locals,
-    too-many-arguments
+    too-many-arguments,
+    duplicate-code
 
 [FORMAT]
 max-line-length=120
