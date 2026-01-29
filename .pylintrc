@@ -17,7 +17,8 @@ disable=
     no-else-return,
     too-many-locals,
     too-many-arguments,
-    duplicate-code
+    duplicate-code,
+    unexpected-keyword-arg
 
 [FORMAT]
 max-line-length=120

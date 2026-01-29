@@ -7,19 +7,14 @@ DOMAIN: Final = "sourceful_zap"
 
 # Configuration keys
 CONF_HOST: Final = "host"
-CONF_API_PATH: Final = "api_path"
 CONF_POLLING_INTERVAL: Final = "polling_interval"
 
 # Default values
 DEFAULT_API_PATH: Final = "/api"
 DEFAULT_POLLING_INTERVAL: Final = 10  # seconds
 MIN_POLLING_INTERVAL: Final = 1  # seconds
+GATEWAY_POLL_INTERVAL: Final = 30  # seconds, gateway system info polling
 
-# API endpoints
-API_DEVICES: Final = "/api/devices"
-API_DEVICE_DATA: Final = "/api/devices/{serial}/data/json"
-API_DEVICE_DERS: Final = "/api/devices/{serial}/ders"
-API_SYSTEM: Final = "/api/system"
 
 # Device information
 MANUFACTURER: Final = "Sourceful Energy"

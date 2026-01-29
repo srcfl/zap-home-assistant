@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
 import socket
 from typing import Any
@@ -18,7 +19,6 @@ import homeassistant.helpers.config_validation as cv
 
 from .api import ZapApiClient, ZapConnectionError
 from .const import (
-    CONF_API_PATH,
     CONF_POLLING_INTERVAL,
     DEFAULT_API_PATH,
     DEFAULT_POLLING_INTERVAL,
@@ -27,13 +27,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_API_PATH, default=DEFAULT_API_PATH): str,
-    }
-)
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
@@ -131,7 +124,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices: list[dict[str, Any]] = []
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None  # pylint: disable=unused-argument
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle the initial step (show menu: manual or scan).
 
@@ -293,8 +286,6 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         Returns:
             List of discovered devices with host and name
         """
-        import ipaddress
-
         discovered = []
 
         # Get Home Assistant's local IP to determine subnet
@@ -429,7 +420,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 device_id = str(zap_info)
 
-            _LOGGER.info("✓ Found Zap gateway at %s (ID: %s)", host, device_id)
+            _LOGGER.info("Found Zap gateway at %s (ID: %s)", host, device_id)
 
             # Now get devices to verify gateway has devices
             devices = await api.get_devices()

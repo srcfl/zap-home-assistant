@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import ZapApiClient, ZapApiError
-from .const import DOMAIN, MODBUS_INVALID_VALUES, OVERFLOW_THRESHOLD
+from .const import DOMAIN, MODBUS_INVALID_VALUES, OVERFLOW_THRESHOLD, GATEWAY_POLL_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,6 +84,115 @@ def validate_numeric(
     return num
 
 
+class ZapGatewayData(TypedDict, total=False):
+    """Type definition for Zap gateway system data."""
+
+    uptime_seconds: int | None
+    gateway_temperature: float | None
+    memory_percent: float | None
+    memory_free: float | None
+    firmware_version: str | None
+    wifi_status: str | None
+    wifi_ssid: str | None
+    signal_strength: float | None
+
+
+class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
+    """Coordinator for fetching gateway-level system info."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api: ZapApiClient,
+    ) -> None:
+        """Initialize the gateway coordinator."""
+        self.api = api
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_gateway",
+            update_interval=timedelta(seconds=GATEWAY_POLL_INTERVAL),
+        )
+
+    async def _async_update_data(self) -> ZapGatewayData:
+        """Fetch gateway system info."""
+        try:
+            system_info = await self.api.get_system_info()
+        except ZapApiError as err:
+            raise UpdateFailed("Error fetching gateway system info") from err
+
+        data: ZapGatewayData = {}
+
+        if not system_info:
+            return data
+
+        # Uptime
+        uptime = system_info.get("uptime_seconds")
+        if uptime is not None:
+            try:
+                data["uptime_seconds"] = int(uptime)
+            except (ValueError, TypeError):
+                pass
+
+        # Temperature
+        temp = validate_numeric(
+            system_info.get("temperature_celsius"),
+            "gateway.temperature_celsius",
+            min_value=-40,
+            max_value=150,
+        )
+        if temp is not None:
+            data["gateway_temperature"] = temp
+
+        # Memory
+        memory = system_info.get("memory_kb", {})
+        if isinstance(memory, dict):
+            pct = validate_numeric(
+                memory.get("percent_used"),
+                "memory_kb.percent_used",
+                min_value=0,
+                max_value=100,
+            )
+            if pct is not None:
+                data["memory_percent"] = pct
+            free = validate_numeric(
+                memory.get("free"),
+                "memory_kb.free",
+                min_value=0,
+            )
+            if free is not None:
+                data["memory_free"] = free
+
+        # Zap info (firmware, network)
+        zap_info = system_info.get("zap", {})
+        if isinstance(zap_info, dict):
+            fw = zap_info.get("firmwareVersion")
+            if fw is not None:
+                data["firmware_version"] = str(fw)
+
+            network = zap_info.get("network", {})
+            if isinstance(network, dict):
+                wifi_status = network.get("wifiStatus")
+                if wifi_status is not None:
+                    data["wifi_status"] = str(wifi_status)
+
+                ssid = network.get("ssid")
+                if ssid is not None:
+                    data["wifi_ssid"] = str(ssid)
+
+                rssi = validate_numeric(
+                    network.get("rssi"),
+                    "zap.network.rssi",
+                    min_value=-120,
+                    max_value=0,
+                )
+                if rssi is not None:
+                    data["signal_strength"] = rssi
+
+        _LOGGER.debug("Gateway system data: %s", data)
+        return data
+
+
 class ZapDeviceData(TypedDict, total=False):
     """Type definition for Zap device data."""
 
@@ -99,7 +208,6 @@ class ZapDeviceData(TypedDict, total=False):
     battery_charge_total: float | None
     battery_discharge_total: float | None
     temperature: float | None
-    signal_strength: float | None
     rated_power: float | None
     capacity: float | None
     firmware_version: str | None

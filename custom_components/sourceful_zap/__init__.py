@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -13,17 +12,13 @@ from homeassistant.helpers import device_registry as dr
 
 from .api import ZapApiClient, ZapApiError
 from .const import (
-    CONF_API_PATH,
     CONF_HOST,
     CONF_POLLING_INTERVAL,
     DEFAULT_API_PATH,
     DEFAULT_POLLING_INTERVAL,
     DOMAIN,
 )
-from .coordinator import ZapDataUpdateCoordinator
-
-if TYPE_CHECKING:
-    from .coordinator import ZapDeviceData
+from .coordinator import ZapDataUpdateCoordinator, ZapGatewayCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,15 +76,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             sw_version=device.get("firmware_version"),
         )
 
-    # Store coordinators and gateway serial in hass.data
-    # The gateway serial is stored as the config entry's unique_id
+    # Create gateway coordinator for system-level sensors
     gateway_serial = entry.unique_id or entry.entry_id
+    gateway_coordinator = ZapGatewayCoordinator(hass, api)
+    await gateway_coordinator.async_config_entry_first_refresh()
+
+    # Register gateway device
+    device_registry = dr.async_get(hass)
+    fw_version = None
+    if gateway_coordinator.data:
+        fw_version = gateway_coordinator.data.get("firmware_version")
+    device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, gateway_serial)},
+        manufacturer="Sourceful Energy",
+        model="Zap Gateway",
+        name=f"Zap Gateway {gateway_serial}",
+        sw_version=fw_version,
+    )
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "api": api,
         "coordinators": coordinators,
         "gateway_serial": gateway_serial,
+        "gateway_coordinator": gateway_coordinator,
     }
 
     # Forward setup to platforms

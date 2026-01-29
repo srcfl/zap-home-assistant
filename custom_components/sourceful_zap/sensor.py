@@ -17,12 +17,15 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
     UnitOfFrequency,
+    UnitOfInformation,
     UnitOfPower,
     UnitOfTemperature,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -30,7 +33,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import ZapDataUpdateCoordinator, ZapDeviceData
+from .coordinator import ZapDataUpdateCoordinator, ZapDeviceData, ZapGatewayCoordinator, ZapGatewayData
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +44,14 @@ class ZapSensorEntityDescription(SensorEntityDescription):
 
     value_fn: Callable[[ZapDeviceData], StateType] | None = None
     available_fn: Callable[[ZapDeviceData], bool] | None = None
+
+
+@dataclass
+class ZapGatewaySensorEntityDescription(SensorEntityDescription):
+    """Describes Zap gateway sensor entity."""
+
+    value_fn: Callable[[ZapGatewayData], StateType] | None = None
+    available_fn: Callable[[ZapGatewayData], bool] | None = None
 
 
 SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
@@ -165,17 +176,6 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
         suggested_display_precision=1,
         value_fn=lambda data: data.get("temperature"),
         available_fn=lambda data: data.get("temperature") is not None,
-    ),
-    ZapSensorEntityDescription(
-        key="signal_strength",
-        translation_key="signal_strength",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
-        entity_registry_enabled_default=False,
-        suggested_display_precision=0,
-        value_fn=lambda data: data.get("signal_strength"),
-        available_fn=lambda data: data.get("signal_strength") is not None,
     ),
     # L1 Phase measurements
     ZapSensorEntityDescription(
@@ -305,6 +305,84 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
     ),
 )
 
+GATEWAY_SENSOR_TYPES: tuple[ZapGatewaySensorEntityDescription, ...] = (
+    ZapGatewaySensorEntityDescription(
+        key="gateway_uptime",
+        translation_key="gateway_uptime",
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("uptime_seconds"),
+        available_fn=lambda data: data.get("uptime_seconds") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_temperature",
+        translation_key="gateway_temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=1,
+        value_fn=lambda data: data.get("gateway_temperature"),
+        available_fn=lambda data: data.get("gateway_temperature") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_memory_percent",
+        translation_key="gateway_memory_percent",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=1,
+        value_fn=lambda data: data.get("memory_percent"),
+        available_fn=lambda data: data.get("memory_percent") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_memory_free",
+        translation_key="gateway_memory_free",
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfInformation.KILOBYTES,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("memory_free"),
+        available_fn=lambda data: data.get("memory_free") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_firmware_version",
+        translation_key="gateway_firmware_version",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("firmware_version"),
+        available_fn=lambda data: data.get("firmware_version") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_wifi_status",
+        translation_key="gateway_wifi_status",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("wifi_status"),
+        available_fn=lambda data: data.get("wifi_status") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_wifi_ssid",
+        translation_key="gateway_wifi_ssid",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.get("wifi_ssid"),
+        available_fn=lambda data: data.get("wifi_ssid") is not None,
+    ),
+    ZapGatewaySensorEntityDescription(
+        key="gateway_signal_strength",
+        translation_key="gateway_signal_strength",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("signal_strength"),
+        available_fn=lambda data: data.get("signal_strength") is not None,
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -371,6 +449,19 @@ async def async_setup_entry(
                     der_types
                 )
 
+    # Create gateway sensor entities
+    gateway_coordinator: ZapGatewayCoordinator = hass.data[DOMAIN][entry.entry_id][
+        "gateway_coordinator"
+    ]
+    for description in GATEWAY_SENSOR_TYPES:
+        entities.append(
+            ZapGatewaySensor(
+                gateway_coordinator,
+                description,
+                gateway_serial,
+            )
+        )
+
     async_add_entities(entities)
 
 
@@ -428,11 +519,6 @@ def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
     if sensor_key == "power":
         return len(der_types) > 0
 
-    # === Unsupported sensors ===
-    # Signal strength not available in any data endpoint
-    if sensor_key == "signal_strength":
-        return False
-
     # Default: don't create
     return False
 
@@ -479,12 +565,10 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
             object_id = f"sourceful_zap_{serial_number}_{description.key}"
 
         self._attr_unique_id = object_id
-        # Suggest the object_id for entity registry
-        self.entity_id = f"sensor.{object_id}"
 
         _LOGGER.debug(
-            "Created sensor entity_id: %s (gateway=%s, profile=%s, device=%s, sensor=%s)",
-            self.entity_id,
+            "Created sensor unique_id: %s (gateway=%s, profile=%s, device=%s, sensor=%s)",
+            object_id,
             gateway_serial,
             device_profile,
             serial_number,
@@ -549,3 +633,40 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
             attributes["capacity"] = capacity
 
         return attributes
+
+
+class ZapGatewaySensor(CoordinatorEntity[ZapGatewayCoordinator], SensorEntity):
+    """Representation of a Zap gateway sensor."""
+
+    entity_description: ZapGatewaySensorEntityDescription
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: ZapGatewayCoordinator,
+        description: ZapGatewaySensorEntityDescription,
+        gateway_serial: str,
+    ) -> None:
+        """Initialize the gateway sensor."""
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"sourceful_zap_{gateway_serial}_{description.key}"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, gateway_serial)},
+        }
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the state of the sensor."""
+        if self.entity_description.value_fn:
+            return self.entity_description.value_fn(self.coordinator.data)
+        return None
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        if not self.coordinator.last_update_success:
+            return False
+        if self.entity_description.available_fn:
+            return self.entity_description.available_fn(self.coordinator.data)
+        return True

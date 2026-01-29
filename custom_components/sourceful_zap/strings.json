@@ -129,6 +129,30 @@
       },
       "grid_frequency": {
         "name": "Grid Frequency"
+      },
+      "gateway_uptime": {
+        "name": "Gateway Uptime"
+      },
+      "gateway_temperature": {
+        "name": "Gateway Temperature"
+      },
+      "gateway_memory_percent": {
+        "name": "Gateway Memory Usage"
+      },
+      "gateway_memory_free": {
+        "name": "Gateway Memory Free"
+      },
+      "gateway_firmware_version": {
+        "name": "Firmware Version"
+      },
+      "gateway_wifi_status": {
+        "name": "WiFi Status"
+      },
+      "gateway_wifi_ssid": {
+        "name": "WiFi SSID"
+      },
+      "gateway_signal_strength": {
+        "name": "Signal Strength"
       }
     }
   }
