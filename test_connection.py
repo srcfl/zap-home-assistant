@@ -177,8 +177,9 @@ async def test_device_data(host: str, serial_number: str, api_path: str = "/api"
                                     print(f"  Power: {der_data['W']} W")
                                 if "total_generation_Wh" in der_data:
                                     print(f"  Total Generation: {der_data['total_generation_Wh']} Wh")
-                                if "soc_percent" in der_data:
-                                    print(f"  SOC: {der_data['soc_percent']}%")
+                                if "SoC_nom_fract" in der_data:
+                                    soc_percent = der_data["SoC_nom_fract"] * 100
+                                    print(f"  SOC: {soc_percent}%")
                                 if "sessionState" in der_data:
                                     print(f"  Session State: {der_data['sessionState']}")
                                 if "timestamp" in der_data:
