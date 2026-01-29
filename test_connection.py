@@ -190,8 +190,25 @@ async def test_device_data(host: str, serial_number: str, api_path: str = "/api"
                     print(f"[ERROR] HTTP {response.status}")
                     print(f"Response: {text[:200]}")
 
+    except aiohttp.ClientConnectorError as err:
+        print(f"[ERROR] Connection refused while fetching device data: {err}")
+        print(f"   Type: {type(err).__name__}")
+        print()
+        print("Troubleshooting:")
+        print("  - Verify the IP address is correct")
+        print("  - Check if device is powered on")
+        print("  - Ensure device is on the same network")
+        print(f"  - Try accessing http://{host}{api_path}/devices/{serial_number}/data/json in a web browser")
+        print("  - Check for firewall rules blocking port 80")
+    except aiohttp.ClientError as err:
+        print(f"[ERROR] Connection error while fetching device data: {err}")
+        print(f"   Type: {type(err).__name__}")
+    except asyncio.TimeoutError:
+        print(f"[ERROR] Connection timeout after 10 seconds while fetching device data")
+        print("   Device may be unreachable or slow to respond")
     except Exception as err:
-        print(f"[ERROR] {err}")
+        print(f"[ERROR] Unexpected error while fetching device data: {err}")
+        print(f"   Type: {type(err).__name__}")
 
 
 if __name__ == "__main__":
