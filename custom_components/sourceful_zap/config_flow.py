@@ -452,11 +452,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Timeout - likely no device at this IP, skip silently
             _LOGGER.debug("Timeout checking %s", host)
         except Exception as err:
-            # Log connection errors for known Zap IPs only
-            if "192.168.1.248" in host:
-                _LOGGER.warning("Error checking known Zap at %s: %s", host, err)
-            else:
-                _LOGGER.debug("Host %s check failed: %s", host, err)
+            _LOGGER.debug("Host %s check failed: %s", host, err)
 
         return None
 
