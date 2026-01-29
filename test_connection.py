@@ -123,7 +123,7 @@ async def test_zap_connection(host: str, api_path: str = "/api"):
         print("  - Verify the IP address is correct")
         print("  - Check if device is powered on")
         print("  - Ensure device is on the same network")
-        print("  - Try accessing http://{host}/api/devices in a web browser")
+        print(f"  - Try accessing http://{host}/api/devices in a web browser")
         print("  - Check for firewall rules blocking port 80")
     except aiohttp.ClientError as err:
         print(f"[ERROR] Connection error: {err}")
