@@ -376,4 +376,4 @@ async def test_custom_timeout(hass: HomeAssistant, aioclient_mock):
     api = ZapApiClient("192.168.1.100", hass, timeout=30)
     await api.get_devices()
 
-    assert api._timeout == 30
+    assert api._timeout == 30  # pylint: disable=protected-access

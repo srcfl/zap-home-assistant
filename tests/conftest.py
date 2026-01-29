@@ -5,7 +5,7 @@ Windows is not supported due to pytest-homeassistant-custom-component
 compatibility issues with the Windows asyncio ProactorEventLoop.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.const import CONF_HOST
@@ -15,7 +15,7 @@ from custom_components.sourceful_zap.const import CONF_POLLING_INTERVAL, DOMAIN
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
+def auto_enable_custom_integrations(enable_custom_integrations):  # pylint: disable=unused-argument
     """Enable custom integrations for all tests."""
     yield
 
@@ -107,7 +107,7 @@ def mock_zap_api():
                 "deviceId": "zap-gateway-12345",
                 "firmwareVersion": "1.8.50",
                 "network": {
-                    "localIP": "192.168.1.248",
+                    "localIP": "192.168.1.100",
                     "ssid": "MyNetwork",
                     "rssi": -47,
                 },
