@@ -1,9 +1,7 @@
 """Test Zap Energy sensors."""
 
-from datetime import timedelta
 from unittest.mock import patch
 
-import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import (
     PERCENTAGE,
@@ -14,7 +12,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
 
 from custom_components.sourceful_zap.const import DOMAIN
 
