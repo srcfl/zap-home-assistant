@@ -124,7 +124,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices: list[dict[str, Any]] = []
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
+        self, user_input: dict[str, Any] | None = None  # pylint: disable=unused-argument
     ) -> FlowResult:
         """Handle the initial step (show menu: manual or scan).
 
