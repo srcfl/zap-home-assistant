@@ -1,0 +1,58 @@
+name: Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements_test.txt
+
+      - name: Lint with pylint
+        run: |
+          pylint custom_components/sourceful_zap
+
+      - name: Check code formatting with black
+        run: |
+          black --check custom_components/sourceful_zap tests/
+
+      - name: Check import sorting with isort
+        run: |
+          isort --check-only custom_components/sourceful_zap tests/
+
+      - name: Type check with mypy
+        run: |
+          mypy custom_components/sourceful_zap
+
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ -v --cov=custom_components/sourceful_zap --cov-report=xml --cov-report=term-missing
+
+      - name: Check config_flow.py coverage
+        run: |
+          pytest tests/test_config_flow.py --cov=custom_components/sourceful_zap/config_flow.py --cov-report=term-missing --cov-fail-under=100
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
