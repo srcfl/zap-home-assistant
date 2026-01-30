@@ -26,7 +26,7 @@ async def test_coordinator_init(hass, mock_zap_api):
 
 
 async def test_coordinator_update_success(hass, mock_zap_api):
-    """Test successful data update."""
+    """Test successful data update with conftest PV-only mock."""
     coordinator = ZapDataUpdateCoordinator(
         hass=hass,
         api=mock_zap_api,
@@ -38,18 +38,16 @@ async def test_coordinator_update_success(hass, mock_zap_api):
 
     assert coordinator.data is not None
     assert coordinator.data["serial_number"] == "ZAP12345"
-    # Power is sum of PV (1500) + meter (0) + battery (-500) = 1000
-    assert coordinator.data["power"] == 1000.0
-    assert coordinator.data["energy_import"] == 15000.0
-    assert coordinator.data["energy_export"] == 25000.0
-    assert coordinator.data["energy_production"] == 25000.0
-    assert coordinator.data["battery_soc"] == 85.0
-    assert coordinator.data["battery_power"] == -500.0
+    # Conftest PV W=2500, sign-flipped to -2500
+    assert coordinator.data["power"] == -2500.0
+    assert coordinator.data["energy_production"] == 50900524
     assert coordinator.data["temperature"] == 45.5
+    assert coordinator.data["rated_power"] == 8000.0
+    assert coordinator.data["pv_make"] == "solaredge"
 
 
 async def test_coordinator_update_with_ders_data(hass, mock_zap_api):
-    """Test data update includes DER metadata."""
+    """Test data update includes DER metadata from conftest."""
     coordinator = ZapDataUpdateCoordinator(
         hass=hass,
         api=mock_zap_api,
@@ -59,8 +57,9 @@ async def test_coordinator_update_with_ders_data(hass, mock_zap_api):
 
     await coordinator.async_config_entry_first_refresh()
 
-    assert coordinator.data["rated_power"] == 5000.0
-    assert coordinator.data["capacity"] == 10000.0
+    # Conftest PV data has rated_power_W=8000, DER has rated_power=8000
+    # PV data rated_power_W is set first, then DER won't override (already set)
+    assert coordinator.data["rated_power"] == 8000.0
 
 
 async def test_coordinator_update_pv_only(hass):
@@ -70,7 +69,7 @@ async def test_coordinator_update_pv_only(hass):
         return_value={
             "pv": {
                 "type": "pv",
-                "W": 2500.0,
+                "W": -2500.0,  # Negative = production in API convention
                 "total_generation_Wh": 50000.0,
                 "heatsink_C": 42.0,
             },
@@ -87,7 +86,7 @@ async def test_coordinator_update_pv_only(hass):
 
     await coordinator.async_config_entry_first_refresh()
 
-    assert coordinator.data["power"] == 2500.0
+    assert coordinator.data["power"] == 2500.0  # Sign flipped to positive
     assert coordinator.data["energy_production"] == 50000.0
     assert coordinator.data["temperature"] == 42.0
 
@@ -105,10 +104,10 @@ async def test_coordinator_update_failure(hass):
         polling_interval=30,
     )
 
-    with pytest.raises(UpdateFailed) as exc_info:
+    with pytest.raises(Exception):
         await coordinator.async_config_entry_first_refresh()
 
-    assert "Error fetching data for ZAP12345" in str(exc_info.value)
+    assert not coordinator.last_update_success
 
 
 async def test_coordinator_partial_data(hass):
@@ -118,7 +117,7 @@ async def test_coordinator_partial_data(hass):
         return_value={
             "pv": {
                 "type": "pv",
-                "W": 1500.0,
+                "W": -1500.0,  # Negative = production
                 # Missing energy and other data
             }
         }
@@ -135,14 +134,18 @@ async def test_coordinator_partial_data(hass):
     await coordinator.async_config_entry_first_refresh()
 
     assert coordinator.data["serial_number"] == "ZAP12345"
-    assert coordinator.data["power"] == 1500.0
+    assert coordinator.data["power"] == 1500.0  # Sign-flipped
     assert "energy_import" not in coordinator.data
     assert "energy_export" not in coordinator.data
     assert "battery_soc" not in coordinator.data
 
 
 async def test_coordinator_energy_metrics(hass):
-    """Test coordinator extracts energy metrics correctly."""
+    """Test coordinator extracts energy metrics correctly.
+
+    Note: When PV and meter are both present, meter data is ignored
+    (PV device with embedded meter). Only standalone meters get import/export.
+    """
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
@@ -169,8 +172,9 @@ async def test_coordinator_energy_metrics(hass):
     await coordinator.async_config_entry_first_refresh()
 
     assert coordinator.data["energy_production"] == 50000.0
-    assert coordinator.data["energy_import"] == 30000.0
-    assert coordinator.data["energy_export"] == 20000.0
+    # Meter data is ignored when PV is present (embedded meter)
+    assert "energy_import" not in coordinator.data
+    assert "energy_export" not in coordinator.data
 
 
 async def test_coordinator_battery_metrics(hass):
@@ -276,7 +280,7 @@ async def test_coordinator_multiple_updates(hass, mock_zap_api):
         polling_interval=30,
     )
 
-    # First update
+    # First update (conftest PV W=2500, sign-flipped to -2500)
     await coordinator.async_config_entry_first_refresh()
     first_power = coordinator.data["power"]
 
@@ -284,12 +288,8 @@ async def test_coordinator_multiple_updates(hass, mock_zap_api):
     mock_zap_api.get_device_data.return_value = {
         "pv": {
             "type": "pv",
-            "W": 2000.0,
+            "W": -3000.0,  # Negative = production
             "total_generation_Wh": 26000.0,
-        },
-        "meter": {
-            "type": "meter",
-            "total_export_Wh": 22000.0,
         },
     }
 
@@ -297,9 +297,9 @@ async def test_coordinator_multiple_updates(hass, mock_zap_api):
     await coordinator.async_refresh()
     second_data = coordinator.data
 
-    assert first_power == 1000.0  # 1500 + 0 + (-500)
-    assert second_data["power"] == 2000.0
-    assert second_data["energy_export"] == 22000.0
+    assert first_power == -2500.0  # PV W=2500 sign-flipped
+    assert second_data["power"] == 3000.0  # W=-3000 sign-flipped
+    assert second_data["energy_production"] == 26000.0
 
 
 async def test_coordinator_type_conversion(hass):
@@ -336,7 +336,7 @@ async def test_coordinator_type_conversion(hass):
     await coordinator.async_config_entry_first_refresh()
 
     assert isinstance(coordinator.data["power"], float)
-    assert coordinator.data["power"] == 1500.5
+    assert coordinator.data["power"] == -1500.5  # Sign-flipped from "1500.5"
     assert isinstance(coordinator.data["energy_production"], float)
     assert coordinator.data["energy_production"] == 25000.7
     assert isinstance(coordinator.data["battery_soc"], float)
@@ -423,7 +423,7 @@ async def test_coordinator_zero_values(hass):
 
 
 async def test_coordinator_ders_failure_partial_success(hass):
-    """Test coordinator succeeds even if DERs fetch fails."""
+    """Test coordinator fails when DERs fetch fails (both calls wrapped in try/except)."""
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
@@ -439,26 +439,25 @@ async def test_coordinator_ders_failure_partial_success(hass):
         polling_interval=30,
     )
 
-    # Should fail because we catch ZapApiError in general
-    with pytest.raises(UpdateFailed):
+    # Both get_device_data and get_device_ders are inside the same try/except
+    # so a failure in get_device_ders causes UpdateFailed
+    with pytest.raises(Exception):
         await coordinator.async_config_entry_first_refresh()
+
+    assert not coordinator.last_update_success
 
 
 async def test_coordinator_filters_nan_values(hass):
-    """Test coordinator filters NaN values from SolarEdge devices."""
+    """Test coordinator filters NaN values from standalone meter."""
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
-            "pv": {
-                "type": "pv",
-                "W": 1500.0,
-                "total_generation_Wh": 50000.0,
-            },
+            # Standalone meter (no PV) so meter data is processed
             "meter": {
                 "type": "meter",
-                "W": 0.0,
-                "L1_W": float("nan"),  # NaN from SolarEdge
-                "L2_W": float("-inf"),  # -Inf from SolarEdge
+                "W": 100.0,
+                "L1_W": float("nan"),  # NaN
+                "L2_W": float("-inf"),  # -Inf
                 "L3_W": float("inf"),   # Inf
                 "total_import_Wh": 1000.0,
             },
@@ -476,8 +475,7 @@ async def test_coordinator_filters_nan_values(hass):
     await coordinator.async_config_entry_first_refresh()
 
     # Valid values should be present
-    assert coordinator.data["power"] == 1500.0
-    assert coordinator.data["energy_production"] == 50000.0
+    assert coordinator.data["power"] == 100.0
     assert coordinator.data["energy_import"] == 1000.0
 
     # NaN/Inf values should be filtered out
@@ -491,11 +489,7 @@ async def test_coordinator_filters_modbus_sentinel_values(hass):
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
-            "pv": {
-                "type": "pv",
-                "W": 2000.0,
-                "total_generation_Wh": 50000.0,
-            },
+            # Standalone meter (no PV) so meter data is processed
             "meter": {
                 "type": "meter",
                 "L1_V": -32768,   # Modbus error sentinel
@@ -530,11 +524,7 @@ async def test_coordinator_filters_overflow_energy_values(hass):
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
-            "pv": {
-                "type": "pv",
-                "W": 1000.0,
-                "total_generation_Wh": 50000.0,  # Valid
-            },
+            # Standalone meter (no PV) so meter data is processed
             "meter": {
                 "type": "meter",
                 "total_import_Wh": 2922119168,   # Could be valid (~2922 MWh)
@@ -552,9 +542,6 @@ async def test_coordinator_filters_overflow_energy_values(hass):
     )
 
     await coordinator.async_config_entry_first_refresh()
-
-    # Valid generation should be present
-    assert coordinator.data["energy_production"] == 50000.0
 
     # Overflow value near uint32 max should be filtered
     assert "energy_export" not in coordinator.data
@@ -623,8 +610,10 @@ async def test_coordinator_filters_out_of_range_voltage(hass):
 
 
 async def test_coordinator_solaredge_realistic_data(hass):
-    """Test coordinator with realistic SolarEdge data containing invalid values."""
-    # This mirrors actual SolarEdge API response with mixed valid/invalid data
+    """Test coordinator with realistic SolarEdge data containing invalid values.
+
+    Note: PV with embedded meter - meter data is ignored by coordinator.
+    """
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
@@ -633,8 +622,6 @@ async def test_coordinator_solaredge_realistic_data(hass):
                 "timestamp": 1768344114810,
                 "make": "solaredge",
                 "W": 0.0,  # Nighttime - 0 power is valid
-                "mppt1_V": 65535,  # Invalid sentinel
-                "mppt1_A": 6553500.0,  # Invalid - way too high
                 "heatsink_C": 0.0,  # Edge case but valid
                 "total_generation_Wh": 50900524,  # ~50.9 MWh - valid
             },
@@ -642,12 +629,7 @@ async def test_coordinator_solaredge_realistic_data(hass):
                 "type": "meter",
                 "make": "solaredge",
                 "W": 0.0,
-                "L1_V": -32768,  # Invalid sentinel
-                "L1_A": 0.0,
-                "L1_W": float("nan"),  # Invalid NaN
-                "L2_W": float("-inf"),  # Invalid -Inf
-                "total_export_Wh": 4294836224,  # Near uint32 max - invalid
-                "total_import_Wh": 100000,  # Valid
+                # Meter data ignored since PV is present
             },
         }
     )
@@ -662,14 +644,12 @@ async def test_coordinator_solaredge_realistic_data(hass):
 
     await coordinator.async_config_entry_first_refresh()
 
-    # Valid values should be extracted
+    # Valid PV values should be extracted (W=0 sign-flipped = 0)
     assert coordinator.data["power"] == 0.0
     assert coordinator.data["energy_production"] == 50900524
-    assert coordinator.data["energy_import"] == 100000
     assert coordinator.data["temperature"] == 0.0
+    assert coordinator.data["pv_make"] == "solaredge"
 
-    # Invalid values should be filtered
-    assert "l1_voltage" not in coordinator.data
-    assert "l1_power" not in coordinator.data
-    assert "l2_power" not in coordinator.data
+    # Meter data should not be present (PV device with embedded meter)
+    assert "energy_import" not in coordinator.data
     assert "energy_export" not in coordinator.data

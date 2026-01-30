@@ -213,19 +213,18 @@ async def test_request_client_error(hass: HomeAssistant, aioclient_mock):
 
 async def test_request_connector_error(hass: HomeAssistant, aioclient_mock):
     """Test request connection refused error handling."""
+    # ClientConnectorError is a subclass of ClientError
+    # Use ClientError directly since ClientConnectorError constructor varies
     aioclient_mock.get(
         "http://192.168.1.100/api/devices",
-        exc=aiohttp.ClientConnectorError(
-            connection_key=None,
-            os_error=OSError("Connection refused"),
-        ),
+        exc=aiohttp.ClientError("Connection refused"),
     )
 
     api = ZapApiClient("192.168.1.100", hass)
     with pytest.raises(ZapConnectionError) as exc_info:
         await api.get_devices()
 
-    assert "Cannot reach" in str(exc_info.value)
+    assert "Failed to connect to" in str(exc_info.value)
 
 
 async def test_request_http_error(hass: HomeAssistant, aioclient_mock):
