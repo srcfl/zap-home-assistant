@@ -3,25 +3,9 @@
     "step": {
       "user": {
         "title": "Connect to Sourceful Zap Gateway",
-        "description": "Choose how you want to add your Zap device",
-        "menu_options": {
-          "manual": "Enter IP address manually",
-          "scan": "Scan network for devices"
-        }
-      },
-      "manual": {
-        "title": "Manual IP Entry",
         "description": "Enter the IP address of your Zap gateway and polling interval.",
         "data": {
           "host": "IP Address",
-          "polling_interval": "Polling Interval (seconds)"
-        }
-      },
-      "scan": {
-        "title": "Select Discovered Device",
-        "description": "Select a discovered Zap device from the list and set polling interval.",
-        "data": {
-          "discovered_device": "Discovered Device",
           "polling_interval": "Polling Interval (seconds)"
         }
       },
@@ -38,8 +22,7 @@
     },
     "abort": {
       "already_configured": "This Zap device is already configured.",
-      "cannot_connect": "Failed to connect to the Zap gateway.",
-      "no_devices_found": "No Zap devices found on network. {message}"
+      "cannot_connect": "Failed to connect to the Zap gateway."
     }
   },
   "options": {

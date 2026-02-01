@@ -17,28 +17,20 @@ from custom_components.sourceful_zap.const import (
 )
 
 
-async def test_user_flow_shows_menu(hass: HomeAssistant):
-    """Test user flow shows menu with manual and scan options."""
+async def test_user_flow_shows_form(hass: HomeAssistant):
+    """Test user flow shows manual entry form."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    assert result["type"] == FlowResultType.MENU
-    assert result["step_id"] == "user"
-    assert "manual" in result["menu_options"]
-    assert "scan" in result["menu_options"]
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "manual"
 
 
 async def test_manual_flow_success(hass: HomeAssistant, mock_zap_api):
     """Test successful manual configuration flow."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    # Select manual entry
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": "manual"},
     )
 
     assert result["type"] == FlowResultType.FORM
@@ -67,11 +59,6 @@ async def test_manual_flow_cannot_connect(hass: HomeAssistant):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": "manual"},
-    )
-
     mock_api = MagicMock()
     mock_api.test_connection = AsyncMock(return_value=False)
 
@@ -96,11 +83,6 @@ async def test_manual_flow_connection_exception(hass: HomeAssistant):
     """Test manual flow with connection exception."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": "manual"},
     )
 
     mock_api = MagicMock()
@@ -131,11 +113,6 @@ async def test_manual_flow_no_devices(hass: HomeAssistant):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": "manual"},
-    )
-
     mock_api = MagicMock()
     mock_api.test_connection = AsyncMock(return_value=True)
     mock_api.get_system_info = AsyncMock(
@@ -164,11 +141,6 @@ async def test_manual_flow_unexpected_exception(hass: HomeAssistant):
     """Test manual flow with unexpected exception."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {"next_step_id": "manual"},
     )
 
     mock_api = MagicMock()
