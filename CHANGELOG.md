@@ -2,6 +2,19 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.0.2] - 2026-08-30
+
+### Fixed
+
+- All config flows now use the gateway serial from `/api/system` as the
+  config entry unique ID. Zeroconf previously keyed on the first device's
+  serial, so the same gateway discovered via different paths could create
+  duplicate entries. Existing entries, the gateway device, and its
+  entities migrate automatically on setup and on rediscovery.
+- The `last_harvest` sensor attribute is now populated from the newest
+  DER read timestamp; the never-populated `connection_status` attribute
+  was removed.
+
 ## [1.0.1] - 2026-08-30
 
 ### Fixed

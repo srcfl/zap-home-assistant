@@ -9,7 +9,11 @@ from typing import Any, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
+from homeassistant.util.dt import utc_from_timestamp
 
 from .api import ZapApiClient, ZapApiError
 from .const import (
@@ -226,7 +230,6 @@ class ZapDeviceData(TypedDict, total=False):
     rated_power: float | None
     capacity: float | None
     firmware_version: str | None
-    connection_status: str | None
     last_harvest: str | None
     # Per-phase meter measurements
     l1_voltage: float | None
@@ -565,6 +568,17 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 # Meter make
                 if "make" in meter_data:
                     data["meter_make"] = meter_data["make"]
+
+            # Newest DER read timestamp (ms epoch) exposed as last_harvest
+            timestamps = [
+                block["timestamp"]
+                for block in device_data.values()
+                if isinstance(block, dict) and block.get("timestamp")
+            ]
+            if timestamps:
+                data["last_harvest"] = utc_from_timestamp(
+                    max(timestamps) / 1000
+                ).isoformat()
 
             # Extract DER metadata from device_ders
             if device_ders_response and "ders" in device_ders_response:

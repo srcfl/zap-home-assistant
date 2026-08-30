@@ -671,3 +671,24 @@ async def test_gateway_coordinator_update_failure(hass, mock_config_entry):
     assert coordinator.last_update_success is False
     assert isinstance(coordinator.last_exception, UpdateFailed)
     assert "Error fetching gateway system info" in str(coordinator.last_exception)
+
+
+async def test_coordinator_last_harvest_from_der_timestamp(
+    hass, mock_config_entry, mock_zap_api_p1_meter
+):
+    """last_harvest is derived from the newest DER read timestamp."""
+    from homeassistant.util.dt import utc_from_timestamp
+
+    coordinator = ZapDataUpdateCoordinator(
+        hass=hass,
+        entry=mock_config_entry,
+        api=mock_zap_api_p1_meter,
+        serial_number="P1METER001",
+        polling_interval=30,
+    )
+    await coordinator.async_refresh()
+
+    raw = mock_zap_api_p1_meter.get_device_data.return_value
+    expected = utc_from_timestamp(raw["meter"]["timestamp"] / 1000).isoformat()
+    assert coordinator.data["last_harvest"] == expected
+    assert "connection_status" not in coordinator.data

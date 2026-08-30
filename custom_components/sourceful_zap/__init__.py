@@ -9,8 +9,9 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
-from .api import ZapApiClient, ZapApiError
+from .api import ZapApiClient, ZapApiError, extract_gateway_serial
 from .const import (
     CONF_HOST,
     CONF_POLLING_INTERVAL,
@@ -45,6 +46,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Found %d devices on gateway at %s", len(devices), host)
     except ZapApiError as err:
         raise ConfigEntryNotReady(f"Error connecting to Zap gateway: {err}") from err
+
+    # Self-heal entries whose unique_id predates the gateway-serial scheme
+    try:
+        system_info = await api.get_system_info()
+    except ZapApiError:
+        system_info = None
+        _LOGGER.debug("Could not fetch system info for unique ID migration")
+    real_serial = extract_gateway_serial(system_info)
+    if real_serial and entry.unique_id != real_serial:
+        conflict = any(
+            other.unique_id == real_serial
+            for other in hass.config_entries.async_entries(DOMAIN)
+            if other.entry_id != entry.entry_id
+        )
+        if conflict:
+            _LOGGER.warning(
+                "Config entry %s duplicates gateway %s; remove one of them",
+                entry.title,
+                real_serial,
+            )
+        else:
+            _migrate_gateway_identity(
+                hass, entry, entry.unique_id or entry.entry_id, real_serial
+            )
 
     # Create coordinator for each device
     coordinators: dict[str, ZapDataUpdateCoordinator] = {}
@@ -114,6 +139,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
+
+
+def _migrate_gateway_identity(
+    hass: HomeAssistant, entry: ConfigEntry, old_id: str, new_id: str
+) -> None:
+    """Move the config entry, gateway device, and its entities to the gateway serial."""
+    hass.config_entries.async_update_entry(entry, unique_id=new_id)
+
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get_device(identifiers={(DOMAIN, old_id)})
+    if device:
+        device_registry.async_update_device(
+            device.id, new_identifiers={(DOMAIN, new_id)}
+        )
+
+    entity_registry = er.async_get(hass)
+    old_prefix = f"sourceful_zap_{old_id}_"
+    for reg_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
+        if reg_entry.unique_id.startswith(old_prefix):
+            suffix = reg_entry.unique_id[len(old_prefix) :]
+            entity_registry.async_update_entity(
+                reg_entry.entity_id,
+                new_unique_id=f"sourceful_zap_{new_id}_{suffix}",
+            )
+    _LOGGER.info("Migrated gateway identity from %s to %s", old_id, new_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

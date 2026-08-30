@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
-from .api import ZapApiClient, ZapConnectionError
+from .api import ZapApiClient, ZapConnectionError, extract_gateway_serial
 from .const import (
     CONF_POLLING_INTERVAL,
     DEFAULT_API_PATH,
@@ -65,28 +65,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     system_info = await api.get_system_info()
     _LOGGER.debug("System info response: %s", system_info)
 
-    # Try to get gateway serial from system info with multiple fallbacks
-    gateway_serial = None
-
-    # Try different possible locations for serial number
-    if system_info:
-        zap_info = system_info.get("zap")
-        if isinstance(zap_info, dict):
-            # Try common serial number fields
-            gateway_serial = (
-                zap_info.get("sn")
-                or zap_info.get("serial_number")
-                or zap_info.get("serialNumber")
-                or zap_info.get("deviceId")
-            )
-
-        # Also check top-level fields
-        if not gateway_serial:
-            gateway_serial = (
-                system_info.get("sn")
-                or system_info.get("serial_number")
-                or system_info.get("serialNumber")
-            )
+    gateway_serial = extract_gateway_serial(system_info)
 
     # If still no serial, use first device's serial as gateway identifier
     if not gateway_serial:
@@ -500,22 +479,39 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.debug("No devices found on Zap gateway at %s", host)
                 return self.async_abort(reason="cannot_connect")
 
-            # Get serial number for unique ID
+            # Use the gateway serial as unique ID; fall back to the first
+            # device serial for firmware that does not report one
             first_device = devices[0]
-            serial_number = first_device.get("serial_number")
-            device_name = first_device.get("name", f"Zap {serial_number}")
+            gateway_serial = extract_gateway_serial(system_info) or first_device.get(
+                "serial_number"
+            )
+            device_name = first_device.get("name", f"Zap {gateway_serial}")
 
-            self._discovery_info["serial_number"] = serial_number
+            self._discovery_info["serial_number"] = gateway_serial
             self._discovery_info["device_name"] = device_name
 
+            # Migrate entries created before the gateway serial became the
+            # unique ID (they were keyed on a device serial)
+            device_serials = {d.get("serial_number") for d in devices}
+            for entry in self._async_current_entries(include_ignore=False):
+                if entry.unique_id == gateway_serial:
+                    continue
+                if (
+                    entry.unique_id in device_serials
+                    or entry.data.get(CONF_HOST) == host
+                ):
+                    self.hass.config_entries.async_update_entry(
+                        entry, unique_id=gateway_serial
+                    )
+
             # Set unique ID and abort if already configured
-            await self.async_set_unique_id(serial_number)
+            await self.async_set_unique_id(gateway_serial)
             self._abort_if_unique_id_configured(updates={CONF_HOST: host})
 
             _LOGGER.info(
-                "Zeroconf: Found Zap device %s (%s) at %s",
+                "Zeroconf: Found Zap gateway %s (%s) at %s",
                 device_name,
-                serial_number,
+                gateway_serial,
                 host,
             )
 
