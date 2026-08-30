@@ -126,8 +126,8 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
         if not system_info:
             return data
 
-        # Uptime
-        uptime = system_info.get("uptime_seconds")
+        # Uptime (firmware 2.x uses camelCase; snake_case kept as legacy fallback)
+        uptime = system_info.get("uptimeSeconds", system_info.get("uptime_seconds"))
         if uptime is not None:
             try:
                 data["uptime_seconds"] = int(uptime)
@@ -136,8 +136,8 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
 
         # Temperature
         temp = validate_numeric(
-            system_info.get("temperature_celsius"),
-            "gateway.temperature_celsius",
+            system_info.get("temperatureCelsius", system_info.get("temperature_celsius")),
+            "gateway.temperatureCelsius",
             min_value=-40,
             max_value=150,
         )
@@ -145,11 +145,11 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
             data["gateway_temperature"] = temp
 
         # Memory
-        memory = system_info.get("memory_kb", {})
+        memory = system_info.get("memoryKb", system_info.get("memory_kb", {}))
         if isinstance(memory, dict):
             pct = validate_numeric(
-                memory.get("percent_used"),
-                "memory_kb.percent_used",
+                memory.get("percentUsed", memory.get("percent_used")),
+                "memoryKb.percentUsed",
                 min_value=0,
                 max_value=100,
             )
@@ -157,7 +157,7 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
                 data["memory_percent"] = pct
             free = validate_numeric(
                 memory.get("free"),
-                "memory_kb.free",
+                "memoryKb.free",
                 min_value=0,
             )
             if free is not None:

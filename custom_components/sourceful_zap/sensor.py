@@ -421,6 +421,7 @@ async def async_setup_entry(
         device_info_map[serial] = {
             "der_types": der_types,
             "profile": profile,
+            "type": device.get("type"),
         }
         _LOGGER.debug("Device %s has DERs: %s, profile: %s", serial, der_types, profile)
 
@@ -431,7 +432,9 @@ async def async_setup_entry(
 
         for description in SENSOR_TYPES:
             # Only create sensors that make sense for this device's DERs
-            if should_create_sensor(description.key, der_types):
+            if should_create_sensor(
+                description.key, der_types, device_info.get("type")
+            ):
                 entities.append(
                     ZapSensor(
                         coordinator,
@@ -465,7 +468,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
+def should_create_sensor(
+    sensor_key: str, der_types: list[str], device_type: str | None = None
+) -> bool:
     """Determine if a sensor should be created based on device DERs.
 
     Based on actual API response formats:
@@ -500,8 +505,13 @@ def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
 
     # === Standalone meter-only sensors ===
     # Grid frequency only available from standalone meter devices (not PV)
+    # p1_uart meters never report Hz, so skip the sensor there
     if sensor_key == "grid_frequency":
-        return "meter" in der_types and "pv" not in der_types
+        return (
+            "meter" in der_types
+            and "pv" not in der_types
+            and device_type != "p1_uart"
+        )
 
     # === Meter sensors (standalone meter only, NOT PV devices) ===
     # PV devices may have embedded meter but we only use PV data for those
