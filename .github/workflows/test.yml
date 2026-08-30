@@ -48,7 +48,7 @@ jobs:
 
       - name: Check config_flow.py coverage
         run: |
-          pytest tests/test_config_flow.py --cov=custom_components/sourceful_zap/config_flow.py --cov-report=term-missing --cov-fail-under=100
+          pytest tests/test_config_flow.py --cov=custom_components.sourceful_zap.config_flow --cov-report=term-missing --cov-fail-under=100
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
