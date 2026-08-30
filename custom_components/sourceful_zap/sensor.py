@@ -650,9 +650,6 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
 
         data = self.coordinator.data
 
-        if connection_status := data.get("connection_status"):
-            attributes["connection_status"] = connection_status
-
         if last_harvest := data.get("last_harvest"):
             attributes["last_harvest"] = last_harvest
 

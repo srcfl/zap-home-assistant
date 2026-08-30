@@ -23,6 +23,31 @@ class ZapConnectionError(ZapApiError):
     """Error connecting to Zap device."""
 
 
+def extract_gateway_serial(system_info: dict[str, Any] | None) -> str | None:
+    """Extract the gateway serial number from a /system response.
+
+    Tries the zap block first (current firmware), then legacy top-level keys.
+    """
+    if not system_info:
+        return None
+    zap_info = system_info.get("zap")
+    if isinstance(zap_info, dict):
+        serial = (
+            zap_info.get("sn")
+            or zap_info.get("serial_number")
+            or zap_info.get("serialNumber")
+            or zap_info.get("deviceId")
+        )
+        if serial:
+            return str(serial)
+    serial = (
+        system_info.get("sn")
+        or system_info.get("serial_number")
+        or system_info.get("serialNumber")
+    )
+    return str(serial) if serial else None
+
+
 class ZapApiClient:
     """Client for interacting with Zap local REST API."""
 

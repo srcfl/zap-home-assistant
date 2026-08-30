@@ -338,9 +338,8 @@ async def test_zeroconf_flow_not_zap_device(hass: HomeAssistant):
 async def test_zeroconf_flow_already_configured(hass: HomeAssistant, mock_zap_api):
     """Test zeroconf flow aborts when device already configured.
 
-    The zeroconf flow uses the first device's serial number as unique id
-    (unlike the manual flow, which uses the gateway serial), so the
-    existing entry must carry the device serial.
+    The existing entry is keyed on a legacy device serial; discovery
+    migrates it to the gateway serial and then aborts as configured.
     """
     existing_entry = MockConfigEntry(
         domain=DOMAIN,
@@ -942,3 +941,38 @@ async def test_zeroconf_confirm_shows_form_without_input(
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["data"] == {CONF_HOST: "192.168.1.100"}
+
+
+async def test_zeroconf_migration_skips_current_and_unrelated_entries(
+    hass: HomeAssistant, mock_zap_api
+):
+    """Entries already on the gateway serial or for other hosts are untouched."""
+    current = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.100"},
+        unique_id="zap-gateway-12345",
+        title="Sourceful Zap zap-gateway-12345",
+    )
+    current.add_to_hass(hass)
+    unrelated = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.9.9"},
+        unique_id="zap-other-gateway",
+        title="Sourceful Zap zap-other-gateway",
+    )
+    unrelated.add_to_hass(hass)
+
+    with patch(
+        "custom_components.sourceful_zap.config_flow.ZapApiClient",
+        return_value=mock_zap_api,
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_ZEROCONF},
+            data=make_zeroconf_info(),
+        )
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert current.unique_id == "zap-gateway-12345"
+    assert unrelated.unique_id == "zap-other-gateway"
