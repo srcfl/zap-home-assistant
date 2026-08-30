@@ -246,7 +246,9 @@ async def test_coordinator_der_metadata(hass, mock_config_entry):
     assert coordinator.data["capacity"] == 15000.0
 
 
-async def test_coordinator_custom_polling_interval(hass, mock_config_entry, mock_zap_api):
+async def test_coordinator_custom_polling_interval(
+    hass, mock_config_entry, mock_zap_api
+):
     """Test coordinator with custom polling interval."""
     coordinator = make_coordinator(
         hass, mock_config_entry, mock_zap_api, polling_interval=60
@@ -410,7 +412,7 @@ async def test_coordinator_filters_nan_values(hass, mock_config_entry):
                 "W": 0.0,
                 "L1_W": float("nan"),  # NaN from SolarEdge
                 "L2_W": float("-inf"),  # -Inf from SolarEdge
-                "L3_W": float("inf"),   # Inf
+                "L3_W": float("inf"),  # Inf
                 "total_import_Wh": 1000.0,
             },
         }
@@ -438,10 +440,10 @@ async def test_coordinator_filters_modbus_sentinel_values(hass, mock_config_entr
         return_value={
             "meter": {
                 "type": "meter",
-                "L1_V": -32768,   # Modbus error sentinel
-                "L2_V": 65535,    # Modbus "no data" sentinel
-                "L3_V": 230.5,    # Valid voltage
-                "L3_A": 32768,    # Modbus unsigned error
+                "L1_V": -32768,  # Modbus error sentinel
+                "L2_V": 65535,  # Modbus "no data" sentinel
+                "L3_V": 230.5,  # Valid voltage
+                "L3_A": 32768,  # Modbus unsigned error
             },
         }
     )
@@ -467,8 +469,8 @@ async def test_coordinator_filters_overflow_energy_values(hass, mock_config_entr
         return_value={
             "meter": {
                 "type": "meter",
-                "total_import_Wh": 2922119168,   # Could be valid (~2922 MWh)
-                "total_export_Wh": 4294836224,   # Near uint32 max - invalid
+                "total_import_Wh": 2922119168,  # Could be valid (~2922 MWh)
+                "total_export_Wh": 4294836224,  # Near uint32 max - invalid
             },
         }
     )
@@ -526,9 +528,9 @@ async def test_coordinator_filters_out_of_range_voltage(hass, mock_config_entry)
         return_value={
             "meter": {
                 "type": "meter",
-                "L1_V": 600.0,    # Too high - invalid
-                "L2_V": -10.0,   # Negative - invalid
-                "L3_V": 240.0,   # Valid
+                "L1_V": 600.0,  # Too high - invalid
+                "L2_V": -10.0,  # Negative - invalid
+                "L3_V": 240.0,  # Valid
             },
         }
     )
@@ -598,7 +600,9 @@ async def test_coordinator_solaredge_realistic_data(hass, mock_config_entry):
     assert "l2_power" not in coordinator.data
 
 
-async def test_gateway_coordinator_current_firmware(hass, mock_config_entry, mock_zap_api):
+async def test_gateway_coordinator_current_firmware(
+    hass, mock_config_entry, mock_zap_api
+):
     """Test gateway coordinator parses the current camelCase system info."""
     coordinator = ZapGatewayCoordinator(hass, mock_config_entry, mock_zap_api)
 

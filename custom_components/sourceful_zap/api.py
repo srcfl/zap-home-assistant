@@ -10,7 +10,6 @@ import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-
 _LOGGER = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT = 10  # seconds
@@ -28,7 +27,11 @@ class ZapApiClient:
     """Client for interacting with Zap local REST API."""
 
     def __init__(
-        self, host: str, hass: HomeAssistant, api_path: str = "/api", timeout: int = REQUEST_TIMEOUT
+        self,
+        host: str,
+        hass: HomeAssistant,
+        api_path: str = "/api",
+        timeout: int = REQUEST_TIMEOUT,
     ) -> None:
         """Initialize the API client.
 
@@ -86,7 +89,9 @@ class ZapApiClient:
             raise ZapConnectionError(f"Failed to connect to {url}: {err}") from err
         except asyncio.TimeoutError as err:
             _LOGGER.error("Timeout connecting to Zap API at %s", url)
-            raise ZapConnectionError(f"Timeout connecting to {url} (waited {self._timeout}s)") from err
+            raise ZapConnectionError(
+                f"Timeout connecting to {url} (waited {self._timeout}s)"
+            ) from err
 
     async def get_devices(self) -> list[dict[str, Any]]:
         """Get list of devices connected to Zap gateway.
@@ -107,7 +112,9 @@ class ZapApiClient:
         elif isinstance(response, list):
             device_list = response
         else:
-            _LOGGER.warning("Unexpected response format from /devices: %s", type(response))
+            _LOGGER.warning(
+                "Unexpected response format from /devices: %s", type(response)
+            )
             return []
 
         devices = []
@@ -125,7 +132,8 @@ class ZapApiClient:
                         "sn": serial_number,  # Keep both for compatibility
                         "name": f"{device_name} {serial_number}",
                         "manufacturer": device.get("manufacturer", "Sourceful Energy"),
-                        "model": device.get("profile") or device.get("type", "Zap Smart Meter"),
+                        "model": device.get("profile")
+                        or device.get("type", "Zap Smart Meter"),
                         "type": device.get("type"),
                         "profile": device.get("profile"),
                         "connection_status": device.get("connected"),

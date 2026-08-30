@@ -54,7 +54,9 @@ SYSTEM_INFO_CURRENT = {
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):  # pylint: disable=unused-argument
+def auto_enable_custom_integrations(
+    enable_custom_integrations,
+):  # pylint: disable=unused-argument
     """Enable custom integrations for all tests."""
     yield
 

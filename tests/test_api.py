@@ -340,7 +340,9 @@ async def test_connection_error_inheritance():
         raise ZapConnectionError("Connection error")
 
 
-async def test_get_devices_with_minimal_device_data(hass: HomeAssistant, aioclient_mock):
+async def test_get_devices_with_minimal_device_data(
+    hass: HomeAssistant, aioclient_mock
+):
     """Test get_devices with minimal device data."""
     aioclient_mock.get(
         "http://192.168.1.100/api/devices",

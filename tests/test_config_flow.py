@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant import config_entries
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.sourceful_zap.api import ZapConnectionError
@@ -18,7 +18,10 @@ from custom_components.sourceful_zap.const import (
     DOMAIN,
 )
 
-def make_zeroconf_info(hostname="zap-gateway.local.", name="zap-gateway._http._tcp.local."):
+
+def make_zeroconf_info(
+    hostname="zap-gateway.local.", name="zap-gateway._http._tcp.local."
+):
     """Build ZeroconfServiceInfo with the current constructor signature."""
     return ZeroconfServiceInfo(
         ip_address=ip_address("192.168.1.100"),
@@ -152,9 +155,7 @@ async def test_manual_flow_no_devices(hass: HomeAssistant):
 
     mock_api = MagicMock()
     mock_api.test_connection = AsyncMock(return_value=True)
-    mock_api.get_system_info = AsyncMock(
-        return_value={"zap": {"deviceId": "zap-123"}}
-    )
+    mock_api.get_system_info = AsyncMock(return_value={"zap": {"deviceId": "zap-123"}})
     mock_api.get_devices = AsyncMock(return_value=[])
 
     with patch(

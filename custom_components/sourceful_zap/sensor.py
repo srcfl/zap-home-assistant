@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -33,7 +33,12 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import ZapDataUpdateCoordinator, ZapDeviceData, ZapGatewayCoordinator, ZapGatewayData
+from .coordinator import (
+    ZapDataUpdateCoordinator,
+    ZapDeviceData,
+    ZapGatewayCoordinator,
+    ZapGatewayData,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -449,7 +454,7 @@ async def async_setup_entry(
                     "Skipping %s sensor for %s (DERs: %s)",
                     description.key,
                     serial_number,
-                    der_types
+                    der_types,
                 )
 
     # Create gateway sensor entities
@@ -489,10 +494,17 @@ def should_create_sensor(
     """
     # === Battery sensors (only battery devices) ===
     # Battery has: W, V, A, SoC_nom_fract, heatsink_C, total_charge/discharge_Wh, limits
-    if sensor_key in ("battery_soc", "battery_voltage", "battery_current",
-                      "battery_charge_total", "battery_discharge_total",
-                      "battery_upper_limit", "battery_lower_limit",
-                      "battery_power", "battery_temperature"):
+    if sensor_key in (
+        "battery_soc",
+        "battery_voltage",
+        "battery_current",
+        "battery_charge_total",
+        "battery_discharge_total",
+        "battery_upper_limit",
+        "battery_lower_limit",
+        "battery_power",
+        "battery_temperature",
+    ):
         return "battery" in der_types
 
     # === PV-only sensors ===
@@ -508,9 +520,7 @@ def should_create_sensor(
     # p1_uart meters never report Hz, so skip the sensor there
     if sensor_key == "grid_frequency":
         return (
-            "meter" in der_types
-            and "pv" not in der_types
-            and device_type != "p1_uart"
+            "meter" in der_types and "pv" not in der_types and device_type != "p1_uart"
         )
 
     # === Meter sensors (standalone meter only, NOT PV devices) ===
@@ -519,9 +529,17 @@ def should_create_sensor(
     if sensor_key in ("energy_import", "energy_export"):
         return "meter" in der_types and "pv" not in der_types
 
-    if sensor_key in ("l1_voltage", "l1_current", "l1_power",
-                      "l2_voltage", "l2_current", "l2_power",
-                      "l3_voltage", "l3_current", "l3_power"):
+    if sensor_key in (
+        "l1_voltage",
+        "l1_current",
+        "l1_power",
+        "l2_voltage",
+        "l2_current",
+        "l2_power",
+        "l3_voltage",
+        "l3_current",
+        "l3_power",
+    ):
         return "meter" in der_types and "pv" not in der_types
 
     # === Universal sensors ===
@@ -570,7 +588,9 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
         if gateway_serial and device_profile:
             object_id = f"sourceful_zap_{gateway_serial}_{device_profile}_{serial_number}_{description.key}"
         elif device_profile:
-            object_id = f"sourceful_zap_{device_profile}_{serial_number}_{description.key}"
+            object_id = (
+                f"sourceful_zap_{device_profile}_{serial_number}_{description.key}"
+            )
         else:
             object_id = f"sourceful_zap_{serial_number}_{description.key}"
 

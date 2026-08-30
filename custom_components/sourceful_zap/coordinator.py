@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 import math
+from datetime import timedelta
 from typing import Any, TypedDict
 
 from homeassistant.config_entries import ConfigEntry
@@ -12,7 +12,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import ZapApiClient, ZapApiError
-from .const import DOMAIN, MODBUS_INVALID_VALUES, OVERFLOW_THRESHOLD, GATEWAY_POLL_INTERVAL
+from .const import (
+    DOMAIN,
+    GATEWAY_POLL_INTERVAL,
+    MODBUS_INVALID_VALUES,
+    OVERFLOW_THRESHOLD,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,12 +66,17 @@ def validate_numeric(
     # Check for values with very large exponents (like 6.5535e+06)
     # Energy totals can legitimately be in millions of Wh, but current/voltage shouldn't be
     energy_fields = (
-        "total_generation_Wh", "total_import_Wh", "total_export_Wh",
-        "total_charge_Wh", "total_discharge_Wh"
+        "total_generation_Wh",
+        "total_import_Wh",
+        "total_export_Wh",
+        "total_charge_Wh",
+        "total_discharge_Wh",
     )
     if abs(num) > 1e6 and field_name not in energy_fields:
         if "Wh" not in field_name:
-            _LOGGER.debug("Suspicious %s value: %s (unexpectedly large)", field_name, num)
+            _LOGGER.debug(
+                "Suspicious %s value: %s (unexpectedly large)", field_name, num
+            )
             return None
 
     # Check for overflow values (near uint32 max)
@@ -139,7 +149,9 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
 
         # Temperature
         temp = validate_numeric(
-            system_info.get("temperatureCelsius", system_info.get("temperature_celsius")),
+            system_info.get(
+                "temperatureCelsius", system_info.get("temperature_celsius")
+            ),
             "gateway.temperatureCelsius",
             min_value=-40,
             max_value=150,
@@ -289,11 +301,7 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
             device_data = await self.api.get_device_data(self.serial_number)
             device_ders_response = await self.api.get_device_ders(self.serial_number)
 
-            _LOGGER.debug(
-                "Raw device data for %s: %s",
-                self.serial_number,
-                device_data
-            )
+            _LOGGER.debug("Raw device data for %s: %s", self.serial_number, device_data)
 
             # Parse and structure data
             data: ZapDeviceData = {
@@ -309,7 +317,9 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 # PV power: Sourceful API uses negative for production, flip sign
                 pv_power = validate_numeric(pv_data.get("W"), "pv.W")
                 if pv_power is not None:
-                    pv_power = -pv_power  # Flip sign: negative API value = positive production
+                    pv_power = (
+                        -pv_power
+                    )  # Flip sign: negative API value = positive production
                     if data.get("power") is None:
                         data["power"] = pv_power
                     else:
@@ -337,7 +347,9 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                     data["temperature"] = pv_temp
 
                 # PV rated power
-                pv_rated = validate_numeric(pv_data.get("rated_power_W"), "pv.rated_power_W", min_value=0)
+                pv_rated = validate_numeric(
+                    pv_data.get("rated_power_W"), "pv.rated_power_W", min_value=0
+                )
                 if pv_rated is not None:
                     data["rated_power"] = pv_rated
 
@@ -346,11 +358,15 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                     data["pv_make"] = pv_data["make"]
 
                 # PV power limits
-                pv_upper = validate_numeric(pv_data.get("upper_limit_W"), "pv.upper_limit_W")
+                pv_upper = validate_numeric(
+                    pv_data.get("upper_limit_W"), "pv.upper_limit_W"
+                )
                 if pv_upper is not None:
                     data["pv_upper_limit"] = pv_upper
 
-                pv_lower = validate_numeric(pv_data.get("lower_limit_W"), "pv.lower_limit_W")
+                pv_lower = validate_numeric(
+                    pv_data.get("lower_limit_W"), "pv.lower_limit_W"
+                )
                 if pv_lower is not None:
                     data["pv_lower_limit"] = pv_lower
 
@@ -436,11 +452,15 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                     data["battery_make"] = battery_data["make"]
 
                 # Battery power limits
-                batt_upper = validate_numeric(battery_data.get("upper_limit_W"), "battery.upper_limit_W")
+                batt_upper = validate_numeric(
+                    battery_data.get("upper_limit_W"), "battery.upper_limit_W"
+                )
                 if batt_upper is not None:
                     data["battery_upper_limit"] = batt_upper
 
-                batt_lower = validate_numeric(battery_data.get("lower_limit_W"), "battery.lower_limit_W")
+                batt_lower = validate_numeric(
+                    battery_data.get("lower_limit_W"), "battery.lower_limit_W"
+                )
                 if batt_lower is not None:
                     data["battery_lower_limit"] = batt_lower
 
@@ -488,12 +508,16 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
 
                 # Per-phase measurements (L1, L2, L3)
                 # Voltage: valid range 0-500V for residential/commercial
-                l1_v = validate_numeric(meter_data.get("L1_V"), "meter.L1_V", min_value=0, max_value=500)
+                l1_v = validate_numeric(
+                    meter_data.get("L1_V"), "meter.L1_V", min_value=0, max_value=500
+                )
                 if l1_v is not None:
                     data["l1_voltage"] = l1_v
 
                 # Current: reasonable range -200 to 200A
-                l1_a = validate_numeric(meter_data.get("L1_A"), "meter.L1_A", min_value=-200, max_value=200)
+                l1_a = validate_numeric(
+                    meter_data.get("L1_A"), "meter.L1_A", min_value=-200, max_value=200
+                )
                 if l1_a is not None:
                     data["l1_current"] = l1_a
 
@@ -502,11 +526,15 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 if l1_w is not None:
                     data["l1_power"] = l1_w
 
-                l2_v = validate_numeric(meter_data.get("L2_V"), "meter.L2_V", min_value=0, max_value=500)
+                l2_v = validate_numeric(
+                    meter_data.get("L2_V"), "meter.L2_V", min_value=0, max_value=500
+                )
                 if l2_v is not None:
                     data["l2_voltage"] = l2_v
 
-                l2_a = validate_numeric(meter_data.get("L2_A"), "meter.L2_A", min_value=-200, max_value=200)
+                l2_a = validate_numeric(
+                    meter_data.get("L2_A"), "meter.L2_A", min_value=-200, max_value=200
+                )
                 if l2_a is not None:
                     data["l2_current"] = l2_a
 
@@ -514,11 +542,15 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 if l2_w is not None:
                     data["l2_power"] = l2_w
 
-                l3_v = validate_numeric(meter_data.get("L3_V"), "meter.L3_V", min_value=0, max_value=500)
+                l3_v = validate_numeric(
+                    meter_data.get("L3_V"), "meter.L3_V", min_value=0, max_value=500
+                )
                 if l3_v is not None:
                     data["l3_voltage"] = l3_v
 
-                l3_a = validate_numeric(meter_data.get("L3_A"), "meter.L3_A", min_value=-200, max_value=200)
+                l3_a = validate_numeric(
+                    meter_data.get("L3_A"), "meter.L3_A", min_value=-200, max_value=200
+                )
                 if l3_a is not None:
                     data["l3_current"] = l3_a
 
@@ -538,19 +570,21 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                     # Get rated power from first enabled DER
                     if der.get("enabled") and "rated_power" in der:
                         if data.get("rated_power") is None:
-                            rated = validate_numeric(der["rated_power"], "der.rated_power", min_value=0)
+                            rated = validate_numeric(
+                                der["rated_power"], "der.rated_power", min_value=0
+                            )
                             if rated is not None:
                                 data["rated_power"] = rated
 
                     # Get capacity from battery DER
                     if der_type == "battery" and "capacity" in der:
-                        capacity = validate_numeric(der["capacity"], "der.capacity", min_value=0)
+                        capacity = validate_numeric(
+                            der["capacity"], "der.capacity", min_value=0
+                        )
                         if capacity is not None:
                             data["capacity"] = capacity
 
-            _LOGGER.debug(
-                "Parsed data for Zap device %s: %s", self.serial_number, data
-            )
+            _LOGGER.debug("Parsed data for Zap device %s: %s", self.serial_number, data)
 
             return data
 

@@ -57,13 +57,15 @@ ATTR_SESSION_STATE: Final = "session_state"
 
 # Modbus sentinel values that indicate invalid/missing data
 # These are common error codes from Modbus devices
-MODBUS_INVALID_VALUES: Final = frozenset({
-    65535,      # 0xFFFF - unsigned 16-bit "no data"
-    -32768,     # 0x8000 signed - invalid/error
-    32768,      # 0x8000 unsigned
-    32767,      # 0x7FFF - max signed 16-bit
-    -32767,     # Min signed 16-bit + 1
-})
+MODBUS_INVALID_VALUES: Final = frozenset(
+    {
+        65535,  # 0xFFFF - unsigned 16-bit "no data"
+        -32768,  # 0x8000 signed - invalid/error
+        32768,  # 0x8000 unsigned
+        32767,  # 0x7FFF - max signed 16-bit
+        -32767,  # Min signed 16-bit + 1
+    }
+)
 
 # Threshold for detecting overflow values (values near 2^32 are likely invalid)
 OVERFLOW_THRESHOLD: Final = 4_000_000_000  # ~4 billion, near uint32 max

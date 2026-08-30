@@ -153,7 +153,9 @@ def test_should_create_sensor_rules():
     # Grid frequency: standalone meter yes, p1_uart never, PV never
     assert should_create_sensor("grid_frequency", ["meter"], "modbus_tcp") is True
     assert should_create_sensor("grid_frequency", ["meter"], "p1_uart") is False
-    assert should_create_sensor("grid_frequency", ["pv", "meter"], "modbus_tcp") is False
+    assert (
+        should_create_sensor("grid_frequency", ["pv", "meter"], "modbus_tcp") is False
+    )
 
     # Battery sensors need a battery DER
     assert should_create_sensor("battery_soc", ["battery"]) is True
@@ -243,9 +245,7 @@ async def test_gateway_sensor_states(
 
     signal_state = get_state(hass, f"{prefix}_gateway_signal_strength")
     assert signal_state.state == "-84.0"
-    assert (
-        signal_state.attributes["device_class"] == SensorDeviceClass.SIGNAL_STRENGTH
-    )
+    assert signal_state.attributes["device_class"] == SensorDeviceClass.SIGNAL_STRENGTH
     assert (
         signal_state.attributes["unit_of_measurement"]
         == SIGNAL_STRENGTH_DECIBELS_MILLIWATT
@@ -343,9 +343,7 @@ async def test_sensor_update(hass: HomeAssistant, mock_config_entry, mock_zap_ap
     assert energy_state.state == "50900700.0"
 
 
-async def test_sensor_device_info(
-    hass: HomeAssistant, mock_config_entry, mock_zap_api
-):
+async def test_sensor_device_info(hass: HomeAssistant, mock_config_entry, mock_zap_api):
     """Test sensors have correct device info."""
     await setup_integration(hass, mock_config_entry, mock_zap_api)
 

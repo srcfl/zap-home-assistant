@@ -8,14 +8,13 @@ import logging
 import socket
 from typing import Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-
 from homeassistant import config_entries
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import AbortFlow, FlowResult
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .api import ZapApiClient, ZapConnectionError
 from .const import (
@@ -48,7 +47,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     _LOGGER.debug(
         "Attempting to connect to Zap gateway at %s with API path %s",
         host,
-        DEFAULT_API_PATH
+        DEFAULT_API_PATH,
     )
 
     api = ZapApiClient(host, hass, api_path=DEFAULT_API_PATH)
@@ -74,23 +73,25 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
         if isinstance(zap_info, dict):
             # Try common serial number fields
             gateway_serial = (
-                zap_info.get("sn") or
-                zap_info.get("serial_number") or
-                zap_info.get("serialNumber") or
-                zap_info.get("deviceId")
+                zap_info.get("sn")
+                or zap_info.get("serial_number")
+                or zap_info.get("serialNumber")
+                or zap_info.get("deviceId")
             )
 
         # Also check top-level fields
         if not gateway_serial:
             gateway_serial = (
-                system_info.get("sn") or
-                system_info.get("serial_number") or
-                system_info.get("serialNumber")
+                system_info.get("sn")
+                or system_info.get("serial_number")
+                or system_info.get("serialNumber")
             )
 
     # If still no serial, use first device's serial as gateway identifier
     if not gateway_serial:
-        _LOGGER.warning("Could not find gateway serial in system info, will use first device serial")
+        _LOGGER.warning(
+            "Could not find gateway serial in system info, will use first device serial"
+        )
 
     _LOGGER.debug("Gateway serial from system: %s", gateway_serial)
 
@@ -124,7 +125,8 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._discovered_devices: list[dict[str, Any]] = []
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None  # pylint: disable=unused-argument
+        self,
+        user_input: dict[str, Any] | None = None,  # pylint: disable=unused-argument
     ) -> FlowResult:
         """Handle the initial step (show menu: manual or scan).
 
@@ -164,7 +166,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.info(
                 "Manual entry: User entered host=%s, polling_interval=%s",
                 host,
-                user_input.get(CONF_POLLING_INTERVAL)
+                user_input.get(CONF_POLLING_INTERVAL),
             )
 
             try:
@@ -182,16 +184,19 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.info(
                     "Device validated successfully: serial=%s, host=%s",
                     serial_number,
-                    user_input[CONF_HOST]
+                    user_input[CONF_HOST],
                 )
 
                 # Update existing entry if already configured (allows changing IP/settings)
                 self._abort_if_unique_id_configured(
-                    updates=user_input,
-                    reload_on_update=True
+                    updates=user_input, reload_on_update=True
                 )
 
-                _LOGGER.info("Creating new entry for device %s at %s", serial_number, user_input[CONF_HOST])
+                _LOGGER.info(
+                    "Creating new entry for device %s at %s",
+                    serial_number,
+                    user_input[CONF_HOST],
+                )
                 return self.async_create_entry(title=info["title"], data=user_input)
 
         # Manual entry form
@@ -224,7 +229,9 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # User selected a discovered device
             selected_host = user_input["discovered_device"]
-            polling_interval = user_input.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL)
+            polling_interval = user_input.get(
+                CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
+            )
 
             # Sanitize host input
             selected_host = selected_host.strip()
@@ -295,13 +302,17 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             local_ips = []
 
             # Get HA network info if available
-            if hasattr(self.hass, 'config') and hasattr(self.hass.config, 'api'):
+            if hasattr(self.hass, "config") and hasattr(self.hass.config, "api"):
                 # Try to get HA's external URL host
                 try:
                     from homeassistant.helpers.network import get_url
-                    ha_url = get_url(self.hass, allow_internal=True, allow_external=False)
+
+                    ha_url = get_url(
+                        self.hass, allow_internal=True, allow_external=False
+                    )
                     if ha_url:
                         from urllib.parse import urlparse
+
                         parsed = urlparse(ha_url)
                         if parsed.hostname:
                             local_ips.append(parsed.hostname)
@@ -315,10 +326,10 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.settimeout(0.1)
                 # Connect to a public DNS server (doesn't actually send data)
-                s.connect(('8.8.8.8', 80))
+                s.connect(("8.8.8.8", 80))
                 route_ip = s.getsockname()[0]
                 s.close()
-                if route_ip and not route_ip.startswith('127.'):
+                if route_ip and not route_ip.startswith("127."):
                     local_ips.append(route_ip)
                     _LOGGER.debug("Got IP from route check: %s", route_ip)
             except Exception as err:
@@ -334,7 +345,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Use first non-Docker IP (prefer 192.168.x.x or 10.x.x.x)
             local_ip = None
             for ip in local_ips:
-                if ip.startswith('192.168.') or ip.startswith('10.'):
+                if ip.startswith("192.168.") or ip.startswith("10."):
                     local_ip = ip
                     break
 
@@ -360,7 +371,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Scan IPs in parallel (batches of 50 for faster scanning)
             batch_size = 50
             for i in range(0, len(scan_range), batch_size):
-                batch = scan_range[i:i+batch_size]
+                batch = scan_range[i : i + batch_size]
                 batch_num = (i // batch_size) + 1
                 total_batches = (len(scan_range) + batch_size - 1) // batch_size
 
@@ -370,7 +381,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     total_batches,
                     i + 1,
                     min(i + batch_size, total_hosts),
-                    total_hosts
+                    total_hosts,
                 )
 
                 tasks = [self._check_host(str(ip)) for ip in batch]
@@ -564,7 +575,9 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return ZapEnergyOptionsFlowHandler()
 
 
-class ZapEnergyOptionsFlowHandler(config_entries.OptionsFlow):  # pylint: disable=too-few-public-methods
+class ZapEnergyOptionsFlowHandler(
+    config_entries.OptionsFlow
+):  # pylint: disable=too-few-public-methods
     """Handle options flow for Zap Energy integration."""
 
     async def async_step_init(
