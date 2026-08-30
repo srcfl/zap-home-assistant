@@ -11,9 +11,10 @@ from typing import Any
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import AbortFlow, FlowResult
+from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .api import ZapApiClient, ZapConnectionError
@@ -127,14 +128,14 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self,
         user_input: dict[str, Any] | None = None,  # pylint: disable=unused-argument
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step (show menu: manual or scan).
 
         Args:
             user_input: User-provided configuration data
 
         Returns:
-            FlowResult with menu
+            ConfigFlowResult with menu
 
         """
         return self.async_show_menu(
@@ -144,14 +145,14 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_manual(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle manual IP entry.
 
         Args:
             user_input: User-provided configuration data
 
         Returns:
-            FlowResult with form or entry creation
+            ConfigFlowResult with form or entry creation
 
         """
         errors: dict[str, str] = {}
@@ -216,14 +217,14 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_scan(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle network scan for Zap devices.
 
         Args:
             user_input: User selection from discovered devices
 
         Returns:
-            FlowResult with discovered devices or manual entry
+            ConfigFlowResult with discovered devices or manual entry
 
         """
         if user_input is not None:
@@ -343,7 +344,7 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.debug("Fallback to hostname IP: %s", local_ip)
 
             # Use first non-Docker IP (prefer 192.168.x.x or 10.x.x.x)
-            local_ip = None
+            local_ip = ""
             for ip in local_ips:
                 if ip.startswith("192.168.") or ip.startswith("10."):
                     local_ip = ip
@@ -460,14 +461,14 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf(
         self, discovery_info: ZeroconfServiceInfo
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle zeroconf discovery.
 
         Args:
             discovery_info: Zeroconf discovery information
 
         Returns:
-            FlowResult with form or abort
+            ConfigFlowResult with form or abort
 
         """
         host = str(discovery_info.ip_address)
@@ -535,14 +536,14 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_zeroconf_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle zeroconf confirmation step.
 
         Args:
             user_input: User confirmation
 
         Returns:
-            FlowResult with entry creation
+            ConfigFlowResult with entry creation
 
         """
         if user_input is not None:
@@ -582,14 +583,14 @@ class ZapEnergyOptionsFlowHandler(
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options.
 
         Args:
             user_input: User-provided options
 
         Returns:
-            FlowResult with form or entry update
+            ConfigFlowResult with form or entry update
 
         """
         if user_input is not None:

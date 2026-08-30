@@ -43,7 +43,7 @@ from .coordinator import (
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class ZapSensorEntityDescription(SensorEntityDescription):
     """Describes Zap sensor entity."""
 
@@ -51,7 +51,7 @@ class ZapSensorEntityDescription(SensorEntityDescription):
     available_fn: Callable[[ZapDeviceData], bool] | None = None
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class ZapGatewaySensorEntityDescription(SensorEntityDescription):
     """Describes Zap gateway sensor entity."""
 
@@ -409,7 +409,7 @@ async def async_setup_entry(
     # Get gateway serial for entity naming
     gateway_serial = hass.data[DOMAIN][entry.entry_id]["gateway_serial"]
 
-    entities: list[ZapSensor] = []
+    entities: list[SensorEntity] = []
 
     # Get device list to check DERs
     api = hass.data[DOMAIN][entry.entry_id]["api"]
@@ -461,11 +461,11 @@ async def async_setup_entry(
     gateway_coordinator: ZapGatewayCoordinator = hass.data[DOMAIN][entry.entry_id][
         "gateway_coordinator"
     ]
-    for description in GATEWAY_SENSOR_TYPES:
+    for gw_description in GATEWAY_SENSOR_TYPES:
         entities.append(
             ZapGatewaySensor(
                 gateway_coordinator,
-                description,
+                gw_description,
                 gateway_serial,
             )
         )
@@ -646,7 +646,7 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
             Dictionary of extra attributes
 
         """
-        attributes = {}
+        attributes: dict[str, Any] = {}
 
         data = self.coordinator.data
 

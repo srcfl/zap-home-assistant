@@ -74,7 +74,8 @@ class ZapApiClient:
                 method, url, timeout=timeout, **kwargs
             ) as response:
                 response.raise_for_status()
-                return await response.json()
+                data: dict[str, Any] | list[dict[str, Any]] = await response.json()
+                return data
         except aiohttp.ClientConnectorError as err:
             _LOGGER.error("Connection refused to Zap API at %s: %s", url, err)
             raise ZapConnectionError(
@@ -156,7 +157,8 @@ class ZapApiClient:
         """
         # Use relative path without the /api prefix
         endpoint = f"/devices/{serial_number}/data/json"
-        return await self._request("GET", endpoint)
+        response = await self._request("GET", endpoint)
+        return response if isinstance(response, dict) else {}
 
     async def get_device_ders(self, serial_number: str) -> dict[str, Any]:
         """Get DER (Distributed Energy Resource) metadata for device.
@@ -170,7 +172,8 @@ class ZapApiClient:
         """
         # Use relative path without the /api prefix
         endpoint = f"/devices/{serial_number}/ders"
-        return await self._request("GET", endpoint)
+        response = await self._request("GET", endpoint)
+        return response if isinstance(response, dict) else {}
 
     async def get_system_info(self) -> dict[str, Any]:
         """Get Zap gateway system information.
@@ -180,7 +183,8 @@ class ZapApiClient:
 
         """
         # Use relative path without the /api prefix
-        return await self._request("GET", "/system")
+        response = await self._request("GET", "/system")
+        return response if isinstance(response, dict) else {}
 
     async def test_connection(self) -> bool:
         """Test connection to Zap gateway.

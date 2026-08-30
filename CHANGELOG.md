@@ -23,6 +23,8 @@ All notable changes to the Sourceful Zap Home Assistant integration.
 - Coordinators now receive the config entry explicitly
   (`DataUpdateCoordinator(config_entry=...)`), as required by current
   Home Assistant versions.
+- Modernized typing throughout (`ConfigFlowResult`, frozen entity
+  descriptions); mypy is clean against HA 2026.2.
 
 ## [1.0.0] - 2026-01-30
 

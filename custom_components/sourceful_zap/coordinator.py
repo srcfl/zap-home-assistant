@@ -320,10 +320,10 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                     pv_power = (
                         -pv_power
                     )  # Flip sign: negative API value = positive production
-                    if data.get("power") is None:
-                        data["power"] = pv_power
-                    else:
-                        data["power"] += pv_power
+                    current_power = data.get("power")
+                    data["power"] = (
+                        pv_power if current_power is None else current_power + pv_power
+                    )
 
                 # PV total generation = production (not export!)
                 # Use reject_overflow to filter out uint32 overflow values
@@ -379,10 +379,12 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 if batt_power is not None:
                     data["battery_power"] = batt_power
                     # Add battery power to total power
-                    if data.get("power") is None:
-                        data["power"] = batt_power
-                    else:
-                        data["power"] += batt_power
+                    current_power = data.get("power")
+                    data["power"] = (
+                        batt_power
+                        if current_power is None
+                        else current_power + batt_power
+                    )
 
                 # Battery SOC is a fraction (0-1), convert to percentage
                 batt_soc_fract = validate_numeric(
@@ -472,10 +474,12 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
                 # Meter shows grid import (positive) or export (negative)
                 meter_power = validate_numeric(meter_data.get("W"), "meter.W")
                 if meter_power is not None:
-                    if data.get("power") is None:
-                        data["power"] = meter_power
-                    else:
-                        data["power"] += meter_power
+                    current_power = data.get("power")
+                    data["power"] = (
+                        meter_power
+                        if current_power is None
+                        else current_power + meter_power
+                    )
 
                 # Meter import/export counters (reject overflow values)
                 meter_import = validate_numeric(
