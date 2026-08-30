@@ -213,10 +213,21 @@ async def test_request_client_error(hass: HomeAssistant, aioclient_mock):
 
 async def test_request_connector_error(hass: HomeAssistant, aioclient_mock):
     """Test request connection refused error handling."""
+    # aiohttp 3.13 requires a real ConnectionKey (str() reads its fields
+    # when the error is logged).
+    connection_key = aiohttp.client_reqrep.ConnectionKey(
+        host="192.168.1.100",
+        port=80,
+        is_ssl=False,
+        ssl=True,
+        proxy=None,
+        proxy_auth=None,
+        proxy_headers_hash=None,
+    )
     aioclient_mock.get(
         "http://192.168.1.100/api/devices",
         exc=aiohttp.ClientConnectorError(
-            connection_key=None,
+            connection_key=connection_key,
             os_error=OSError("Connection refused"),
         ),
     )

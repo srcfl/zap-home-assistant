@@ -7,6 +7,7 @@ import logging
 import math
 from typing import Any, TypedDict
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -103,6 +104,7 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
     def __init__(
         self,
         hass: HomeAssistant,
+        entry: ConfigEntry,
         api: ZapApiClient,
     ) -> None:
         """Initialize the gateway coordinator."""
@@ -110,6 +112,7 @@ class ZapGatewayCoordinator(DataUpdateCoordinator[ZapGatewayData]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=f"{DOMAIN}_gateway",
             update_interval=timedelta(seconds=GATEWAY_POLL_INTERVAL),
         )
@@ -245,6 +248,7 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
     def __init__(
         self,
         hass: HomeAssistant,
+        entry: ConfigEntry,
         api: ZapApiClient,
         serial_number: str,
         polling_interval: int,
@@ -253,6 +257,7 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
 
         Args:
             hass: Home Assistant instance
+            entry: Config entry owning this coordinator
             api: Zap API client
             serial_number: Device serial number
             polling_interval: Update interval in seconds
@@ -264,6 +269,7 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=f"{DOMAIN}_{serial_number}",
             update_interval=timedelta(seconds=polling_interval),
         )

@@ -1,5 +1,6 @@
 """Test Zap Energy config flow."""
 
+from ipaddress import ip_address
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,6 +9,7 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.sourceful_zap.api import ZapConnectionError
 from custom_components.sourceful_zap.const import (
@@ -15,6 +17,18 @@ from custom_components.sourceful_zap.const import (
     DEFAULT_POLLING_INTERVAL,
     DOMAIN,
 )
+
+def make_zeroconf_info(hostname="zap-gateway.local.", name="zap-gateway._http._tcp.local."):
+    """Build ZeroconfServiceInfo with the current constructor signature."""
+    return ZeroconfServiceInfo(
+        ip_address=ip_address("192.168.1.100"),
+        ip_addresses=[ip_address("192.168.1.100")],
+        hostname=hostname,
+        name=name,
+        port=80,
+        properties={},
+        type="_http._tcp.local.",
+    )
 
 
 async def test_user_flow_shows_menu(hass: HomeAssistant):
@@ -251,15 +265,7 @@ async def test_manual_flow_sanitizes_host(hass: HomeAssistant, mock_zap_api):
 
 async def test_zeroconf_flow_success(hass: HomeAssistant, mock_zap_api):
     """Test successful zeroconf discovery flow."""
-    discovery_info = ZeroconfServiceInfo(
-        host="192.168.1.100",
-        addresses=["192.168.1.100"],
-        hostname="zap-gateway.local.",
-        name="zap-gateway._http._tcp.local.",
-        port=80,
-        properties={},
-        type="_http._tcp.local.",
-    )
+    discovery_info = make_zeroconf_info()
 
     with patch(
         "custom_components.sourceful_zap.config_flow.ZapApiClient",
@@ -278,15 +284,7 @@ async def test_zeroconf_flow_success(hass: HomeAssistant, mock_zap_api):
 
 async def test_zeroconf_flow_cannot_connect(hass: HomeAssistant):
     """Test zeroconf flow aborts when cannot connect."""
-    discovery_info = ZeroconfServiceInfo(
-        host="192.168.1.100",
-        addresses=["192.168.1.100"],
-        hostname="zap-gateway.local.",
-        name="zap-gateway._http._tcp.local.",
-        port=80,
-        properties={},
-        type="_http._tcp.local.",
-    )
+    discovery_info = make_zeroconf_info()
 
     mock_api = MagicMock()
     mock_api.test_connection = AsyncMock(return_value=False)
@@ -307,14 +305,9 @@ async def test_zeroconf_flow_cannot_connect(hass: HomeAssistant):
 
 async def test_zeroconf_flow_not_zap_device(hass: HomeAssistant):
     """Test zeroconf flow aborts when device is not a Zap gateway."""
-    discovery_info = ZeroconfServiceInfo(
-        host="192.168.1.100",
-        addresses=["192.168.1.100"],
+    discovery_info = make_zeroconf_info(
         hostname="other-device.local.",
         name="other-device._http._tcp.local.",
-        port=80,
-        properties={},
-        type="_http._tcp.local.",
     )
 
     mock_api = MagicMock()
@@ -335,21 +328,22 @@ async def test_zeroconf_flow_not_zap_device(hass: HomeAssistant):
     assert result["reason"] == "cannot_connect"
 
 
-async def test_zeroconf_flow_already_configured(
-    hass: HomeAssistant, mock_config_entry, mock_zap_api
-):
-    """Test zeroconf flow aborts when device already configured."""
-    mock_config_entry.add_to_hass(hass)
+async def test_zeroconf_flow_already_configured(hass: HomeAssistant, mock_zap_api):
+    """Test zeroconf flow aborts when device already configured.
 
-    discovery_info = ZeroconfServiceInfo(
-        host="192.168.1.100",
-        addresses=["192.168.1.100"],
-        hostname="zap-gateway.local.",
-        name="zap-gateway._http._tcp.local.",
-        port=80,
-        properties={},
-        type="_http._tcp.local.",
+    The zeroconf flow uses the first device's serial number as unique id
+    (unlike the manual flow, which uses the gateway serial), so the
+    existing entry must carry the device serial.
+    """
+    existing_entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.100"},
+        unique_id="INV001",
+        title="Solaredge INV001",
     )
+    existing_entry.add_to_hass(hass)
+
+    discovery_info = make_zeroconf_info()
 
     with patch(
         "custom_components.sourceful_zap.config_flow.ZapApiClient",
@@ -367,15 +361,7 @@ async def test_zeroconf_flow_already_configured(
 
 async def test_zeroconf_confirm_step(hass: HomeAssistant, mock_zap_api):
     """Test zeroconf confirmation step creates entry."""
-    discovery_info = ZeroconfServiceInfo(
-        host="192.168.1.100",
-        addresses=["192.168.1.100"],
-        hostname="zap-gateway.local.",
-        name="zap-gateway._http._tcp.local.",
-        port=80,
-        properties={},
-        type="_http._tcp.local.",
-    )
+    discovery_info = make_zeroconf_info()
 
     with patch(
         "custom_components.sourceful_zap.config_flow.ZapApiClient",

@@ -14,7 +14,7 @@ from homeassistant import config_entries
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import AbortFlow, FlowResult
 import homeassistant.helpers.config_validation as cv
 
 from .api import ZapApiClient, ZapConnectionError
@@ -512,6 +512,9 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 description_placeholders={"name": device_name},
             )
 
+        except AbortFlow:
+            # Re-raise flow aborts (e.g. already_configured) untouched
+            raise
         except ZapConnectionError as err:
             _LOGGER.debug("Zeroconf connection error: %s", err)
             return self.async_abort(reason="cannot_connect")
@@ -558,20 +561,11 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             Options flow handler
 
         """
-        return ZapEnergyOptionsFlowHandler(config_entry)
+        return ZapEnergyOptionsFlowHandler()
 
 
 class ZapEnergyOptionsFlowHandler(config_entries.OptionsFlow):  # pylint: disable=too-few-public-methods
     """Handle options flow for Zap Energy integration."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow.
-
-        Args:
-            config_entry: Config entry instance
-
-        """
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

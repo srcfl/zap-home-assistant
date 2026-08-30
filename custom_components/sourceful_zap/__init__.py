@@ -53,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Setting up device: %s (type: %s, profile: %s)",
                      serial_number, device.get("type"), device.get("profile"))
         coordinator = ZapDataUpdateCoordinator(
-            hass, api, serial_number, polling_interval
+            hass, entry, api, serial_number, polling_interval
         )
 
         # Fetch initial data
@@ -78,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create gateway coordinator for system-level sensors
     gateway_serial = entry.unique_id or entry.entry_id
-    gateway_coordinator = ZapGatewayCoordinator(hass, api)
+    gateway_coordinator = ZapGatewayCoordinator(hass, entry, api)
     await gateway_coordinator.async_config_entry_first_refresh()
 
     # Register gateway device
