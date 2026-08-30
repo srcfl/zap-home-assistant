@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Polling interval from data (config flow) or options (for backwards compatibility)
     polling_interval = entry.data.get(
         CONF_POLLING_INTERVAL,
-        entry.options.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL)
+        entry.options.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL),
     )
 
     # Create API client with hardcoded /api path
@@ -50,10 +50,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinators: dict[str, ZapDataUpdateCoordinator] = {}
     for device in devices:
         serial_number = device["serial_number"]
-        _LOGGER.info("Setting up device: %s (type: %s, profile: %s)",
-                     serial_number, device.get("type"), device.get("profile"))
+        _LOGGER.info(
+            "Setting up device: %s (type: %s, profile: %s)",
+            serial_number,
+            device.get("type"),
+            device.get("profile"),
+        )
         coordinator = ZapDataUpdateCoordinator(
-            hass, api, serial_number, polling_interval
+            hass, entry, api, serial_number, polling_interval
         )
 
         # Fetch initial data
@@ -78,7 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create gateway coordinator for system-level sensors
     gateway_serial = entry.unique_id or entry.entry_id
-    gateway_coordinator = ZapGatewayCoordinator(hass, api)
+    gateway_coordinator = ZapGatewayCoordinator(hass, entry, api)
     await gateway_coordinator.async_config_entry_first_refresh()
 
     # Register gateway device

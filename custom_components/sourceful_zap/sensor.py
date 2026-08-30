@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -33,12 +33,17 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import ZapDataUpdateCoordinator, ZapDeviceData, ZapGatewayCoordinator, ZapGatewayData
+from .coordinator import (
+    ZapDataUpdateCoordinator,
+    ZapDeviceData,
+    ZapGatewayCoordinator,
+    ZapGatewayData,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class ZapSensorEntityDescription(SensorEntityDescription):
     """Describes Zap sensor entity."""
 
@@ -46,7 +51,7 @@ class ZapSensorEntityDescription(SensorEntityDescription):
     available_fn: Callable[[ZapDeviceData], bool] | None = None
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class ZapGatewaySensorEntityDescription(SensorEntityDescription):
     """Describes Zap gateway sensor entity."""
 
@@ -404,7 +409,7 @@ async def async_setup_entry(
     # Get gateway serial for entity naming
     gateway_serial = hass.data[DOMAIN][entry.entry_id]["gateway_serial"]
 
-    entities: list[ZapSensor] = []
+    entities: list[SensorEntity] = []
 
     # Get device list to check DERs
     api = hass.data[DOMAIN][entry.entry_id]["api"]
@@ -421,6 +426,7 @@ async def async_setup_entry(
         device_info_map[serial] = {
             "der_types": der_types,
             "profile": profile,
+            "type": device.get("type"),
         }
         _LOGGER.debug("Device %s has DERs: %s, profile: %s", serial, der_types, profile)
 
@@ -431,7 +437,9 @@ async def async_setup_entry(
 
         for description in SENSOR_TYPES:
             # Only create sensors that make sense for this device's DERs
-            if should_create_sensor(description.key, der_types):
+            if should_create_sensor(
+                description.key, der_types, device_info.get("type")
+            ):
                 entities.append(
                     ZapSensor(
                         coordinator,
@@ -446,18 +454,18 @@ async def async_setup_entry(
                     "Skipping %s sensor for %s (DERs: %s)",
                     description.key,
                     serial_number,
-                    der_types
+                    der_types,
                 )
 
     # Create gateway sensor entities
     gateway_coordinator: ZapGatewayCoordinator = hass.data[DOMAIN][entry.entry_id][
         "gateway_coordinator"
     ]
-    for description in GATEWAY_SENSOR_TYPES:
+    for gw_description in GATEWAY_SENSOR_TYPES:
         entities.append(
             ZapGatewaySensor(
                 gateway_coordinator,
-                description,
+                gw_description,
                 gateway_serial,
             )
         )
@@ -465,7 +473,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
+def should_create_sensor(
+    sensor_key: str, der_types: list[str], device_type: str | None = None
+) -> bool:
     """Determine if a sensor should be created based on device DERs.
 
     Based on actual API response formats:
@@ -484,10 +494,17 @@ def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
     """
     # === Battery sensors (only battery devices) ===
     # Battery has: W, V, A, SoC_nom_fract, heatsink_C, total_charge/discharge_Wh, limits
-    if sensor_key in ("battery_soc", "battery_voltage", "battery_current",
-                      "battery_charge_total", "battery_discharge_total",
-                      "battery_upper_limit", "battery_lower_limit",
-                      "battery_power", "battery_temperature"):
+    if sensor_key in (
+        "battery_soc",
+        "battery_voltage",
+        "battery_current",
+        "battery_charge_total",
+        "battery_discharge_total",
+        "battery_upper_limit",
+        "battery_lower_limit",
+        "battery_power",
+        "battery_temperature",
+    ):
         return "battery" in der_types
 
     # === PV-only sensors ===
@@ -500,8 +517,11 @@ def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
 
     # === Standalone meter-only sensors ===
     # Grid frequency only available from standalone meter devices (not PV)
+    # p1_uart meters never report Hz, so skip the sensor there
     if sensor_key == "grid_frequency":
-        return "meter" in der_types and "pv" not in der_types
+        return (
+            "meter" in der_types and "pv" not in der_types and device_type != "p1_uart"
+        )
 
     # === Meter sensors (standalone meter only, NOT PV devices) ===
     # PV devices may have embedded meter but we only use PV data for those
@@ -509,9 +529,17 @@ def should_create_sensor(sensor_key: str, der_types: list[str]) -> bool:
     if sensor_key in ("energy_import", "energy_export"):
         return "meter" in der_types and "pv" not in der_types
 
-    if sensor_key in ("l1_voltage", "l1_current", "l1_power",
-                      "l2_voltage", "l2_current", "l2_power",
-                      "l3_voltage", "l3_current", "l3_power"):
+    if sensor_key in (
+        "l1_voltage",
+        "l1_current",
+        "l1_power",
+        "l2_voltage",
+        "l2_current",
+        "l2_power",
+        "l3_voltage",
+        "l3_current",
+        "l3_power",
+    ):
         return "meter" in der_types and "pv" not in der_types
 
     # === Universal sensors ===
@@ -560,7 +588,9 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
         if gateway_serial and device_profile:
             object_id = f"sourceful_zap_{gateway_serial}_{device_profile}_{serial_number}_{description.key}"
         elif device_profile:
-            object_id = f"sourceful_zap_{device_profile}_{serial_number}_{description.key}"
+            object_id = (
+                f"sourceful_zap_{device_profile}_{serial_number}_{description.key}"
+            )
         else:
             object_id = f"sourceful_zap_{serial_number}_{description.key}"
 
@@ -616,7 +646,7 @@ class ZapSensor(CoordinatorEntity[ZapDataUpdateCoordinator], SensorEntity):
             Dictionary of extra attributes
 
         """
-        attributes = {}
+        attributes: dict[str, Any] = {}
 
         data = self.coordinator.data
 
