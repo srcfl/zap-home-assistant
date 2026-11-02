@@ -24,6 +24,7 @@ from homeassistant.const import (
     UnitOfFrequency,
     UnitOfInformation,
     UnitOfPower,
+    UnitOfReactivePower,
     UnitOfTemperature,
     UnitOfTime,
 )
@@ -32,7 +33,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import (
+    DER_TYPE_BATTERY,
+    DER_TYPE_INVERTER,
+    DER_TYPE_METER,
+    DER_TYPE_PV,
+    DOMAIN,
+    EV_DER_TYPES,
+    GRID_POWER_COMPANION_DERS,
+    PV_DER_TYPES,
+)
 from .coordinator import (
     ZapDataUpdateCoordinator,
     ZapDeviceData,
@@ -41,6 +51,16 @@ from .coordinator import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Sensors created only when the first poll already has a value, so v1 devices
+# do not grow entities for fields their firmware never reports.
+_REQUIRES_INITIAL_VALUE = frozenset(
+    {
+        "battery_available_charge",
+        "battery_available_discharge",
+        "grid_reactive_power",
+    }
+)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -69,6 +89,36 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
         suggested_display_precision=0,
         value_fn=lambda data: data.get("power"),
         available_fn=lambda data: data.get("power") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="grid_power",
+        translation_key="grid_power",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("grid_power"),
+        available_fn=lambda data: data.get("grid_power") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="inverter_power",
+        translation_key="inverter_power",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("inverter_power"),
+        available_fn=lambda data: data.get("inverter_power") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="ev_charger_power",
+        translation_key="ev_charger_power",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("ev_charger_power"),
+        available_fn=lambda data: data.get("ev_charger_power") is not None,
     ),
     ZapSensorEntityDescription(
         key="energy_import",
@@ -171,6 +221,26 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
         suggested_display_precision=0,
         value_fn=lambda data: data.get("battery_lower_limit"),
         available_fn=lambda data: data.get("battery_lower_limit") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="battery_available_charge",
+        translation_key="battery_available_charge",
+        device_class=SensorDeviceClass.ENERGY_STORAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("battery_available_charge"),
+        available_fn=lambda data: data.get("battery_available_charge") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="battery_available_discharge",
+        translation_key="battery_available_discharge",
+        device_class=SensorDeviceClass.ENERGY_STORAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("battery_available_discharge"),
+        available_fn=lambda data: data.get("battery_available_discharge") is not None,
     ),
     ZapSensorEntityDescription(
         key="temperature",
@@ -308,6 +378,16 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
         value_fn=lambda data: data.get("grid_frequency"),
         available_fn=lambda data: data.get("grid_frequency") is not None,
     ),
+    ZapSensorEntityDescription(
+        key="grid_reactive_power",
+        translation_key="grid_reactive_power",
+        device_class=SensorDeviceClass.REACTIVE_POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfReactivePower.VOLT_AMPERE_REACTIVE,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("grid_reactive_power"),
+        available_fn=lambda data: data.get("grid_reactive_power") is not None,
+    ),
 )
 
 GATEWAY_SENSOR_TYPES: tuple[ZapGatewaySensorEntityDescription, ...] = (
@@ -432,14 +512,22 @@ async def async_setup_entry(
 
     for serial_number, coordinator in coordinators.items():
         device_info = device_info_map.get(serial_number, {})
-        der_types = device_info.get("der_types", [])
+        # /ders is authoritative (firmware 7 names solar/inverter there).
+        # Fall back to the device list when that response had no DER array.
+        der_types = coordinator.der_types or device_info.get("der_types", [])
         device_profile = device_info.get("profile", "device")
+        snapshot = coordinator.data or {}
 
         for description in SENSOR_TYPES:
             # Only create sensors that make sense for this device's DERs
             if should_create_sensor(
                 description.key, der_types, device_info.get("type")
             ):
+                if (
+                    description.key in _REQUIRES_INITIAL_VALUE
+                    and snapshot.get(description.key) is None
+                ):
+                    continue
                 entities.append(
                     ZapSensor(
                         coordinator,
@@ -478,11 +566,12 @@ def should_create_sensor(
 ) -> bool:
     """Determine if a sensor should be created based on device DERs.
 
-    Based on actual API response formats:
-    - Battery: W, V, A, SoC_nom_fract, heatsink_C, total_charge/discharge_Wh, upper/lower_limit_W
-    - PV: W, rated_power_W, mppt1/2_V/A, heatsink_C, total_generation_Wh
-    - PV meter: W, Hz, L1/2/3_V/A/W, total_import/export_Wh
-    - p1_uart meter: W, L1/2/3_V/A/W, total_import/export_Wh (NO Hz, NO heatsink_C)
+    v1 DER type ``pv`` and v2 type ``solar`` both mean a PV array. A v1 ``pv``
+    device may embed a meter object that is not the grid meter, so meter
+    sensors stay suppressed when ``pv`` is present. v2 ``solar`` devices
+    report a real grid meter alongside the array, so meter sensors are kept.
+
+    p1_uart meters never report Hz.
 
     Args:
         sensor_key: Sensor type key
@@ -492,8 +581,10 @@ def should_create_sensor(
         True if sensor should be created
 
     """
-    # === Battery sensors (only battery devices) ===
-    # Battery has: W, V, A, SoC_nom_fract, heatsink_C, total_charge/discharge_Wh, limits
+    ders = set(der_types)
+    has_pv_v1 = DER_TYPE_PV in ders
+    has_meter = DER_TYPE_METER in ders and not has_pv_v1
+
     if sensor_key in (
         "battery_soc",
         "battery_voltage",
@@ -504,30 +595,27 @@ def should_create_sensor(
         "battery_lower_limit",
         "battery_power",
         "battery_temperature",
+        "battery_available_charge",
+        "battery_available_discharge",
     ):
-        return "battery" in der_types
+        return DER_TYPE_BATTERY in ders
 
-    # === PV-only sensors ===
-    # PV has: total_generation_Wh, heatsink_C
     if sensor_key == "energy_production":
-        return "pv" in der_types
+        return bool(ders & PV_DER_TYPES)
 
+    # Inverter temperature covers v2 hybrids whose solar block has no temp.
     if sensor_key == "temperature":
-        return "pv" in der_types
+        return bool(ders & PV_DER_TYPES) or DER_TYPE_INVERTER in ders
 
-    # === Standalone meter-only sensors ===
-    # Grid frequency only available from standalone meter devices (not PV)
-    # p1_uart meters never report Hz, so skip the sensor there
     if sensor_key == "grid_frequency":
-        return (
-            "meter" in der_types and "pv" not in der_types and device_type != "p1_uart"
-        )
+        if device_type == "p1_uart":
+            return False
+        if DER_TYPE_INVERTER in ders:
+            return True
+        return has_meter
 
-    # === Meter sensors (standalone meter only, NOT PV devices) ===
-    # PV devices may have embedded meter but we only use PV data for those
-    # Standalone meter (p1_uart) has: L1/2/3_V/A/W, total_import/export_Wh
-    if sensor_key in ("energy_import", "energy_export"):
-        return "meter" in der_types and "pv" not in der_types
+    if sensor_key in ("energy_import", "energy_export", "grid_reactive_power"):
+        return has_meter
 
     if sensor_key in (
         "l1_voltage",
@@ -540,14 +628,20 @@ def should_create_sensor(
         "l3_current",
         "l3_power",
     ):
-        return "meter" in der_types and "pv" not in der_types
+        return has_meter
 
-    # === Universal sensors ===
-    # Power is aggregated from all DER types
+    if sensor_key == "grid_power":
+        return has_meter and bool(ders & GRID_POWER_COMPANION_DERS)
+
+    if sensor_key == "inverter_power":
+        return DER_TYPE_INVERTER in ders
+
+    if sensor_key == "ev_charger_power":
+        return bool(ders & EV_DER_TYPES)
+
     if sensor_key == "power":
-        return len(der_types) > 0
+        return len(ders) > 0
 
-    # Default: don't create
     return False
 
 

@@ -1,0 +1,28 @@
+{
+  "ders": [
+    {
+      "enabled": true,
+      "installed_power_W_dc": 8000,
+      "type": "solar"
+    },
+    {
+      "adjustable": true,
+      "capacity_Wh_dc": 15000,
+      "enabled": true,
+      "max_soc_fract": 1,
+      "min_soc_fract": 0.1,
+      "rated_power_W_dc": 8000,
+      "type": "battery"
+    },
+    {
+      "enabled": true,
+      "type": "meter"
+    },
+    {
+      "enabled": true,
+      "rated_power_W_ac": 10000,
+      "type": "inverter"
+    }
+  ],
+  "sn": "1033060242040054"
+}
