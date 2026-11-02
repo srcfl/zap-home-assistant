@@ -146,6 +146,8 @@ async def test_grid_frequency_not_created_for_p1_meter(
 
     prefix = f"sourceful_zap_{GATEWAY}_p1_uart_p1m-00003c7f387506dc"
     assert get_entity_id(hass, f"{prefix}_grid_frequency") is None
+    # v1 P1 payloads have no reactive power field
+    assert get_entity_id(hass, f"{prefix}_grid_reactive_power") is None
 
 
 def test_should_create_sensor_rules():
@@ -179,6 +181,22 @@ def test_should_create_sensor_rules():
     # Unknown keys are never created
     assert should_create_sensor("bogus", ["pv", "battery", "meter"]) is False
 
+    # v2 solar is a PV array, but it does not suppress the grid meter the
+    # way a v1 pv device suppresses its embedded meter.
+    hybrid = ["solar", "battery", "meter", "inverter"]
+    assert should_create_sensor("energy_production", ["solar"]) is True
+    assert should_create_sensor("energy_production", hybrid) is True
+    assert should_create_sensor("temperature", hybrid) is True
+    assert should_create_sensor("energy_import", hybrid) is True
+    assert should_create_sensor("l1_power", hybrid) is True
+    assert should_create_sensor("grid_frequency", hybrid, "modbus_tcp") is True
+    assert should_create_sensor("grid_power", hybrid) is True
+    assert should_create_sensor("grid_power", ["meter"]) is False
+    assert should_create_sensor("inverter_power", hybrid) is True
+    assert should_create_sensor("inverter_power", ["pv"]) is False
+    assert should_create_sensor("ev_charger_power", ["ev_charger_port"]) is True
+    assert should_create_sensor("battery_available_charge", ["battery"]) is True
+
 
 async def test_battery_sensor_states(
     hass: HomeAssistant, mock_config_entry, mock_zap_api_battery
@@ -205,6 +223,9 @@ async def test_battery_sensor_states(
     assert get_state(hass, f"{prefix}_battery_charge_total").state == "5261000.0"
     assert get_state(hass, f"{prefix}_battery_discharge_total").state == "4389000.0"
     assert get_state(hass, f"{prefix}_battery_temperature").state == "28.0"
+    # v2-only remaining-energy sensors are not created for v1 batteries
+    assert get_entity_id(hass, f"{prefix}_battery_available_charge") is None
+    assert get_entity_id(hass, f"{prefix}_battery_available_discharge") is None
 
     # Battery DER metadata ends up as extra attributes on the power sensor
     agg_power = get_state(hass, f"{prefix}_power")

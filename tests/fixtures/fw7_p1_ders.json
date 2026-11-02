@@ -1,0 +1,10 @@
+{
+  "ders": [
+    {
+      "enabled": true,
+      "location": "grid",
+      "type": "meter"
+    }
+  ],
+  "sn": "p1m-0000788327eef648"
+}

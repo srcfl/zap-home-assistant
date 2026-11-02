@@ -1,0 +1,25 @@
+{
+  "format": "p1_uart",
+  "meter": {
+    "Hz": null,
+    "W_ac": 169,
+    "apparent_VA_ac": null,
+    "l1_A_ac": -0.7,
+    "l1_V_ac": 230.5,
+    "l1_W_ac": -97,
+    "l2_A_ac": -1.1,
+    "l2_V_ac": 230.3,
+    "l2_W_ac": -168,
+    "l3_A_ac": 2.3,
+    "l3_V_ac": 229.9,
+    "l3_W_ac": 369,
+    "make": "p1",
+    "reactive_var_ac": -638,
+    "read_time_ms": 2,
+    "timestamp": 1793643289904,
+    "total_export_Wh_ac": 7409377,
+    "total_import_Wh_ac": 57805594,
+    "type": "meter"
+  },
+  "version": "v2"
+}

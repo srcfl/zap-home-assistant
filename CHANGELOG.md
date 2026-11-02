@@ -2,6 +2,36 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.1.0] - 2026-11-02
+
+### Added
+
+- Firmware 7.x / Sourceful data model v2. The local REST payloads
+  (`/api/devices/{sn}/data/json` and `/api/devices/{sn}/ders`) are detected per
+  response from `version: "v2"` or from v2 keys (`solar`, `inverter`,
+  `*_ac` / `*_dc`, `soc_nom_fract`). Null ac/dc variants are skipped so the
+  populated side is used, and unsuffixed v1 fields are still read when the
+  v2 name is absent.
+- v2 `solar` maps onto the existing PV sensors. Generation stays negative on
+  the wire and positive on the power sensor, matching firmware 2.3.x.
+- v2 battery fields (`W_dc`, `soc_nom_fract`, `total_charge_Wh_dc`,
+  `total_discharge_Wh_dc`, limits, temperature) map onto the existing battery
+  sensors. Sign is unchanged from v1: positive charging, negative discharging.
+- v2 grid meters, including a meter that shares a hybrid inverter with solar,
+  map onto import/export, per-phase V/A/W, and frequency. A v1 `pv` payload
+  still ignores its embedded meter.
+- Grid power sensor for v2 hybrids, where aggregate power remains
+  solar plus battery. Inverter AC power is its own sensor, positive while
+  the inverter is supplying.
+- Battery available charge/discharge and meter reactive power sensors when
+  the device actually reports them.
+
+### Fixed
+
+- Firmware 2.3.x (data model v1) behaviour is unchanged: `pv` / `W` /
+  `L1_W` / `SoC_nom_fract` and the P1 meter still parse as before, and
+  `p1_uart` devices still do not get a grid frequency sensor.
+
 ## [1.0.2] - 2026-08-30
 
 ### Fixed

@@ -337,13 +337,13 @@ async def test_coordinator_empty_device_data(hass, mock_config_entry):
 
 
 async def test_coordinator_negative_battery_power(hass, mock_config_entry):
-    """Test coordinator handles negative battery power (charging)."""
+    """Battery power is stored with the API sign (negative = discharging)."""
     mock_api = MagicMock()
     mock_api.get_device_data = AsyncMock(
         return_value={
             "battery": {
                 "type": "battery",
-                "W": -1500.0,  # Negative = charging
+                "W": -1500.0,  # Sourceful sign: negative = discharging
             }
         }
     )

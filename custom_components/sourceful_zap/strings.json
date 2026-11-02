@@ -58,6 +58,15 @@
       "power": {
         "name": "Power"
       },
+      "grid_power": {
+        "name": "Grid Power"
+      },
+      "inverter_power": {
+        "name": "Inverter Power"
+      },
+      "ev_charger_power": {
+        "name": "EV Charger Power"
+      },
       "energy_import": {
         "name": "Import"
       },
@@ -87,6 +96,12 @@
       },
       "battery_lower_limit": {
         "name": "Battery Lower Limit"
+      },
+      "battery_available_charge": {
+        "name": "Battery Available Charge"
+      },
+      "battery_available_discharge": {
+        "name": "Battery Available Discharge"
       },
       "temperature": {
         "name": "Temperature"
@@ -129,6 +144,9 @@
       },
       "grid_frequency": {
         "name": "Grid Frequency"
+      },
+      "grid_reactive_power": {
+        "name": "Reactive Power"
       },
       "gateway_uptime": {
         "name": "Gateway Uptime"

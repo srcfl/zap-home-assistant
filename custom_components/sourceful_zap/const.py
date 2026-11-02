@@ -40,11 +40,26 @@ SENSOR_TYPE_MPPT1_CURRENT: Final = "mppt1_current"
 SENSOR_TYPE_MPPT2_VOLTAGE: Final = "mppt2_voltage"
 SENSOR_TYPE_MPPT2_CURRENT: Final = "mppt2_current"
 
-# DER (Distributed Energy Resource) types
+# DER (Distributed Energy Resource) types.
+# Firmware 2.3.x uses pv; firmware 7.x (data model v2) uses solar and adds
+# inverter. ev_charger_port is the v2 name for an EV port.
 DER_TYPE_PV: Final = "pv"
+DER_TYPE_SOLAR: Final = "solar"
 DER_TYPE_BATTERY: Final = "battery"
 DER_TYPE_METER: Final = "meter"
+DER_TYPE_INVERTER: Final = "inverter"
 DER_TYPE_EV_CHARGER: Final = "ev_charger"
+DER_TYPE_EV_CHARGER_PORT: Final = "ev_charger_port"
+DER_TYPE_V2X_CHARGER: Final = "v2x_charger"
+
+PV_DER_TYPES: Final = frozenset({DER_TYPE_PV, DER_TYPE_SOLAR})
+EV_DER_TYPES: Final = frozenset(
+    {DER_TYPE_EV_CHARGER, DER_TYPE_EV_CHARGER_PORT, DER_TYPE_V2X_CHARGER}
+)
+# v2 DER types that sit beside a real grid meter. Aggregate power is then
+# solar/battery, and grid power gets its own sensor. v1 "pv" is intentionally
+# absent: those devices embed a meter that is not the grid meter.
+GRID_POWER_COMPANION_DERS: Final = frozenset({DER_TYPE_SOLAR, DER_TYPE_INVERTER})
 
 # Attributes
 ATTR_SERIAL_NUMBER: Final = "serial_number"
