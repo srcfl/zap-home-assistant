@@ -2,6 +2,19 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.1.1] - 2026-11-02
+
+### Fixed
+
+- Sensors get their names. The integration shipped without
+  `translations/en.json`, so names fell back to the device class: L1, L2 and
+  L3 power were all "Power", four gateway sensors had no name of their own, and
+  entity IDs got suffixes such as `_power_2`. Existing installs get the new
+  names and keep their entity IDs. New installs also get clean entity IDs. The
+  same file carries the config flow text.
+- Brand icon added, which HACS validation requires.
+- The release zip no longer contains `__pycache__` files.
+
 ## [1.1.0] - 2026-11-02
 
 ### Added
