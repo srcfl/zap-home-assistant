@@ -28,26 +28,37 @@ Follow official docs - don't reinvent:
 
 Minimum for Core inclusion:
 
-- [ ] Config flow (no YAML)
-- [ ] Proper entity naming
-- [ ] DataUpdateCoordinator
-- [ ] Error handling
-- [ ] Tests with >80% coverage
-- [ ] Translations (strings.json)
+- [x] Config flow (no YAML)
+- [x] Proper entity naming
+- [x] DataUpdateCoordinator
+- [x] Error handling
+- [x] Tests with >80% coverage
+- [x] Translations (`strings.json` and `translations/en.json`)
 - [ ] Diagnostics support
 
 ## Device API
 
+The endpoints the integration uses, in `api.py`:
+
 ```
-GET /api/system          # Device info
-GET /api/data/p1/obis    # P1 meter data (legacy)
-# REST API docs pending from @damo
+GET /api/system                    # Gateway info
+GET /api/devices                   # Devices on the gateway
+GET /api/devices/{sn}/data/json    # Live data, data model v1 or v2
+GET /api/devices/{sn}/ders         # DER metadata
 ```
 
-## Branches
+`datamodel.py` detects the data model per response. Firmware 2.3.x sends v1 and firmware 7.x sends v2.
 
-- `main` - New integration (WIP)
-- `legacy-v0.1` - Working P1-only integration
+## Translations
+
+Custom integrations load names from `translations/en.json`. `strings.json` is only read when Home Assistant builds core. Keep the two files identical, or sensors fall back to device class names.
+
+## Branches and releases
+
+- `main` - Current integration
+- `legacy-v0.1` - Old P1-only integration
+
+Pushing a `vX.Y.Z` tag from `main` publishes a release. Bump `manifest.json` and `CHANGELOG.md` first. See "Releasing" in `README.md`.
 
 ## Principles
 
