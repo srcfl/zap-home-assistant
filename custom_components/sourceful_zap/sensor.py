@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -51,16 +52,6 @@ from .coordinator import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-# Sensors created only when the first poll already has a value, so v1 devices
-# do not grow entities for fields their firmware never reports.
-_REQUIRES_INITIAL_VALUE = frozenset(
-    {
-        "battery_available_charge",
-        "battery_available_discharge",
-        "grid_reactive_power",
-    }
-)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -388,6 +379,67 @@ SENSOR_TYPES: tuple[ZapSensorEntityDescription, ...] = (
         value_fn=lambda data: data.get("grid_reactive_power"),
         available_fn=lambda data: data.get("grid_reactive_power") is not None,
     ),
+    # PV inputs
+    ZapSensorEntityDescription(
+        key="mppt1_voltage",
+        translation_key="mppt1_voltage",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=1,
+        value_fn=lambda data: data.get("mppt1_voltage"),
+        available_fn=lambda data: data.get("mppt1_voltage") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="mppt1_current",
+        translation_key="mppt1_current",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=2,
+        value_fn=lambda data: data.get("mppt1_current"),
+        available_fn=lambda data: data.get("mppt1_current") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="mppt1_power",
+        translation_key="mppt1_power",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("mppt1_power"),
+        available_fn=lambda data: data.get("mppt1_power") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="mppt2_voltage",
+        translation_key="mppt2_voltage",
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=1,
+        value_fn=lambda data: data.get("mppt2_voltage"),
+        available_fn=lambda data: data.get("mppt2_voltage") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="mppt2_current",
+        translation_key="mppt2_current",
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=2,
+        value_fn=lambda data: data.get("mppt2_current"),
+        available_fn=lambda data: data.get("mppt2_current") is not None,
+    ),
+    ZapSensorEntityDescription(
+        key="mppt2_power",
+        translation_key="mppt2_power",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        suggested_display_precision=0,
+        value_fn=lambda data: data.get("mppt2_power"),
+        available_fn=lambda data: data.get("mppt2_power") is not None,
+    ),
 )
 
 GATEWAY_SENSOR_TYPES: tuple[ZapGatewaySensorEntityDescription, ...] = (
@@ -489,8 +541,6 @@ async def async_setup_entry(
     # Get gateway serial for entity naming
     gateway_serial = hass.data[DOMAIN][entry.entry_id]["gateway_serial"]
 
-    entities: list[SensorEntity] = []
-
     # Get device list to check DERs
     api = hass.data[DOMAIN][entry.entry_id]["api"]
     devices = await api.get_devices()
@@ -510,40 +560,62 @@ async def async_setup_entry(
         }
         _LOGGER.debug("Device %s has DERs: %s, profile: %s", serial, der_types, profile)
 
-    for serial_number, coordinator in coordinators.items():
+    added: set[tuple[str, str]] = set()
+
+    def new_device_sensors(
+        serial_number: str, coordinator: ZapDataUpdateCoordinator
+    ) -> list[SensorEntity]:
+        """Return the device's sensors whose first value has just been reported.
+
+        ``/ders`` lists what a device is configured with, and that can include
+        a DER it never reads: an inverter with no grid meter still lists a
+        meter. So a sensor is created at its first value, not from ``/ders``
+        alone, and one that has had a value stays and shows unavailable.
+        """
         device_info = device_info_map.get(serial_number, {})
         # /ders is authoritative (firmware 7 names solar/inverter there).
         # Fall back to the device list when that response had no DER array.
         der_types = coordinator.der_types or device_info.get("der_types", [])
-        device_profile = device_info.get("profile", "device")
         snapshot = coordinator.data or {}
 
+        new_sensors: list[SensorEntity] = []
         for description in SENSOR_TYPES:
-            # Only create sensors that make sense for this device's DERs
-            if should_create_sensor(
-                description.key, der_types, device_info.get("type")
+            sensor_id = (serial_number, description.key)
+            if (
+                sensor_id in added
+                or snapshot.get(description.key) is None
+                or not should_create_sensor(
+                    description.key, der_types, device_info.get("type")
+                )
             ):
-                if (
-                    description.key in _REQUIRES_INITIAL_VALUE
-                    and snapshot.get(description.key) is None
-                ):
-                    continue
-                entities.append(
-                    ZapSensor(
-                        coordinator,
-                        description,
-                        serial_number,
-                        device_profile,
-                        gateway_serial,
-                    )
-                )
-            else:
-                _LOGGER.debug(
-                    "Skipping %s sensor for %s (DERs: %s)",
-                    description.key,
+                continue
+            added.add(sensor_id)
+            new_sensors.append(
+                ZapSensor(
+                    coordinator,
+                    description,
                     serial_number,
-                    der_types,
+                    device_info.get("profile", "device"),
+                    gateway_serial,
                 )
+            )
+        return new_sensors
+
+    def add_new_device_sensors(
+        serial_number: str, coordinator: ZapDataUpdateCoordinator
+    ) -> None:
+        """Add sensors whose values started to arrive after setup."""
+        if new_sensors := new_device_sensors(serial_number, coordinator):
+            async_add_entities(new_sensors)
+
+    entities: list[SensorEntity] = []
+    for serial_number, coordinator in coordinators.items():
+        entities.extend(new_device_sensors(serial_number, coordinator))
+        entry.async_on_unload(
+            coordinator.async_add_listener(
+                partial(add_new_device_sensors, serial_number, coordinator)
+            )
+        )
 
     # Create gateway sensor entities
     gateway_coordinator: ZapGatewayCoordinator = hass.data[DOMAIN][entry.entry_id][
@@ -571,7 +643,8 @@ def should_create_sensor(
     sensors stay suppressed when ``pv`` is present. v2 ``solar`` devices
     report a real grid meter alongside the array, so meter sensors are kept.
 
-    p1_uart meters never report Hz.
+    p1_uart meters never report Hz. An inverter's L1-L3 values fill the phase
+    sensors when the device has no grid meter.
 
     Args:
         sensor_key: Sensor type key
@@ -628,7 +701,17 @@ def should_create_sensor(
         "l3_current",
         "l3_power",
     ):
-        return has_meter
+        return has_meter or DER_TYPE_INVERTER in ders
+
+    if sensor_key in (
+        "mppt1_voltage",
+        "mppt1_current",
+        "mppt1_power",
+        "mppt2_voltage",
+        "mppt2_current",
+        "mppt2_power",
+    ):
+        return bool(ders & PV_DER_TYPES)
 
     if sensor_key == "grid_power":
         return has_meter and bool(ders & GRID_POWER_COMPANION_DERS)

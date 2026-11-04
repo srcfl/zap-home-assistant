@@ -76,6 +76,24 @@
       "energy_export": {
         "name": "Export"
       },
+      "mppt1_voltage": {
+        "name": "MPPT 1 Voltage"
+      },
+      "mppt1_current": {
+        "name": "MPPT 1 Current"
+      },
+      "mppt1_power": {
+        "name": "MPPT 1 Power"
+      },
+      "mppt2_voltage": {
+        "name": "MPPT 2 Voltage"
+      },
+      "mppt2_current": {
+        "name": "MPPT 2 Current"
+      },
+      "mppt2_power": {
+        "name": "MPPT 2 Power"
+      },
       "battery_soc": {
         "name": "Battery"
       },

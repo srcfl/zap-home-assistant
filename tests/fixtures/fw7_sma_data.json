@@ -1,0 +1,28 @@
+{
+  "format": "json",
+  "solar": {
+    "W_ac": null,
+    "W_dc": -2857,
+    "lower_limit_W_ac": null,
+    "lower_limit_W_dc": null,
+    "make": "sma",
+    "mppt": [
+      {
+        "A_dc": -4.036,
+        "V_dc": 353.96,
+        "W_dc": -1428.58
+      },
+      {
+        "A_dc": -4.032,
+        "V_dc": 354.55,
+        "W_dc": -1429.55
+      }
+    ],
+    "read_time_ms": 1089,
+    "timestamp": 1793793785918,
+    "total_generation_Wh_ac": 21686913,
+    "total_generation_Wh_dc": null,
+    "type": "solar"
+  },
+  "version": "v2"
+}
