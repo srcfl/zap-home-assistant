@@ -197,6 +197,15 @@ def test_should_create_sensor_rules():
     assert should_create_sensor("ev_charger_power", ["ev_charger_port"]) is True
     assert should_create_sensor("battery_available_charge", ["battery"]) is True
 
+    # An inverter's phases can fill the phase sensors, but not a v1 pv device's
+    assert should_create_sensor("l1_voltage", ["solar", "inverter"]) is True
+    assert should_create_sensor("l1_voltage", ["solar"]) is False
+
+    # PV inputs need a PV array
+    assert should_create_sensor("mppt1_voltage", ["solar"]) is True
+    assert should_create_sensor("mppt2_power", ["pv"]) is True
+    assert should_create_sensor("mppt1_voltage", ["battery", "meter"]) is False
+
 
 async def test_battery_sensor_states(
     hass: HomeAssistant, mock_config_entry, mock_zap_api_battery
@@ -296,10 +305,10 @@ async def test_sensor_availability_on_success(
         assert get_state(hass, f"{prefix}_{key}").state != "unavailable"
 
 
-async def test_sensor_unavailable_on_missing_data(
+async def test_sensor_appears_at_first_value_then_goes_unavailable(
     hass: HomeAssistant, mock_config_entry
 ):
-    """Test sensors become unavailable when data is missing."""
+    """A sensor needs a first value, then stays and can go unavailable."""
     mock_api = MagicMock()
     mock_api.get_devices = AsyncMock(
         return_value=[
@@ -315,7 +324,6 @@ async def test_sensor_unavailable_on_missing_data(
             }
         ]
     )
-    # Return empty data
     mock_api.get_device_data = AsyncMock(return_value={})
     mock_api.get_device_ders = AsyncMock(return_value={})
     mock_api.get_system_info = AsyncMock(return_value={})
@@ -323,8 +331,27 @@ async def test_sensor_unavailable_on_missing_data(
     await setup_integration(hass, mock_config_entry, mock_api)
 
     prefix = f"sourceful_zap_{GATEWAY}_meter_ZAP12345"
+    coordinator = hass.data[DOMAIN][mock_config_entry.entry_id]["coordinators"][
+        "ZAP12345"
+    ]
 
-    # Sensors without data should be unavailable
+    # No data yet: nothing to show
+    assert get_entity_id(hass, f"{prefix}_power") is None
+    assert get_entity_id(hass, f"{prefix}_energy_import") is None
+
+    # First values arrive: the sensors appear without a reload
+    mock_api.get_device_data = AsyncMock(
+        return_value={"meter": {"W": 120.0, "total_import_Wh": 5000}}
+    )
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert get_state(hass, f"{prefix}_power").state == "120.0"
+    assert get_state(hass, f"{prefix}_energy_import").state == "5000.0"
+
+    # A later poll without them leaves the sensors there, unavailable
+    mock_api.get_device_data = AsyncMock(return_value={})
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
     assert get_state(hass, f"{prefix}_power").state == "unavailable"
     assert get_state(hass, f"{prefix}_energy_import").state == "unavailable"
 
@@ -499,5 +526,5 @@ async def test_sensor_none_value_handling(hass: HomeAssistant, mock_config_entry
 
     assert get_state(hass, f"{prefix}_power").state == "1500.0"
 
-    # Energy production should be unavailable due to the None value
-    assert get_state(hass, f"{prefix}_energy_production").state == "unavailable"
+    # No generation counter has been reported, so there is no sensor for it yet
+    assert get_entity_id(hass, f"{prefix}_energy_production") is None

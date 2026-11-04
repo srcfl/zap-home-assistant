@@ -17,6 +17,10 @@ Assistant values follow the v1 integration behaviour:
 * inverter AC power is negative while the inverter is supplying; ``inverter_power``
   is negated so output reads positive, and it is not added to aggregate power
   because solar and battery already account for that energy
+* a PV input's current and power are negative while generating; the MPPT sensors
+  negate them so production reads positive, like the power sensor
+* an inverter's phase current and power are negated like ``inverter_power``. They
+  fill the L1-L3 sensors only on a device with no grid meter
 """
 
 from __future__ import annotations
@@ -63,6 +67,8 @@ _RATED_AC_FIRST: tuple[str, ...] = (
     "rated_power_W",
     "rated_power",
 )
+# The Zap reads at most two PV inputs.
+_MPPT_INPUTS = 2
 _DER_RATED_KEYS: tuple[str, ...] = (
     "rated_power",
     "rated_power_W",
@@ -124,6 +130,13 @@ class ZapDeviceData(TypedDict, total=False):
     # PV power limits
     pv_upper_limit: float | None
     pv_lower_limit: float | None
+    # PV inputs, v2 only. Current and power are positive while generating.
+    mppt1_voltage: float | None
+    mppt1_current: float | None
+    mppt1_power: float | None
+    mppt2_voltage: float | None
+    mppt2_current: float | None
+    mppt2_power: float | None
     # v2-only measurements
     inverter_power: float | None
     ev_charger_power: float | None
@@ -260,12 +273,14 @@ def parse_device_data(
     v2 = is_data_model_v2(device_data)
     _LOGGER.debug("Parsing %s as data model %s", serial_number, "v2" if v2 else "v1")
 
+    meter_block = _block(device_data, "meter")
     _apply_solar(data, _block(device_data, *PV_BLOCK_KEYS))
-    _apply_inverter(data, _block(device_data, "inverter"))
+    _apply_inverter(
+        data, _block(device_data, "inverter"), include_phases=meter_block is None
+    )
     _apply_battery(data, _block(device_data, "battery"))
     # v1 PV payloads ship an embedded meter that is not the grid meter.
     # Ignore that object entirely. v2 meters next to solar are the grid meter.
-    meter_block = _block(device_data, "meter")
     if meter_block is not None and (v2 or "pv" not in device_data):
         _apply_meter(
             data,
@@ -399,6 +414,29 @@ def _apply_solar(data: ZapDeviceData, block: dict[str, Any] | None) -> None:
     if pv_lower is not None:
         data["pv_lower_limit"] = pv_lower
 
+    _apply_mppt(data, block.get("mppt"))
+
+
+def _apply_mppt(data: ZapDeviceData, inputs: Any) -> None:
+    """Copy each PV input's DC values, with generation positive."""
+    if not isinstance(inputs, list):
+        return
+
+    values = cast(dict[str, Any], data)
+    for number, pv_input in enumerate(inputs[:_MPPT_INPUTS], start=1):
+        if not isinstance(pv_input, dict):
+            continue
+
+        voltage = _read_metric(pv_input, ("V_dc",), f"mppt{number}.V_dc", min_value=0)
+        if voltage is not None:
+            values[f"mppt{number}_voltage"] = voltage
+
+        for quantity, key in (("current", "A_dc"), ("power", "W_dc")):
+            reading = _read_metric(pv_input, (key,), f"mppt{number}.{key}")
+            if reading is not None:
+                # 0 - x keeps a 0 reading +0.
+                values[f"mppt{number}_{quantity}"] = 0.0 - reading
+
 
 def _apply_battery(data: ZapDeviceData, block: dict[str, Any] | None) -> None:
     if block is None:
@@ -488,7 +526,12 @@ def _apply_battery(data: ZapDeviceData, block: dict[str, Any] | None) -> None:
         data["battery_lower_limit"] = batt_lower
 
 
-def _apply_inverter(data: ZapDeviceData, block: dict[str, Any] | None) -> None:
+def _apply_inverter(
+    data: ZapDeviceData,
+    block: dict[str, Any] | None,
+    *,
+    include_phases: bool,
+) -> None:
     if block is None:
         return
 
@@ -516,6 +559,9 @@ def _apply_inverter(data: ZapDeviceData, block: dict[str, Any] | None) -> None:
         freq = _read_metric(block, ("Hz",), "inverter.Hz", min_value=45, max_value=65)
         if freq is not None:
             data["grid_frequency"] = freq
+
+    if include_phases:
+        _apply_phases(data, block, "inverter", output_positive=True)
 
 
 def _apply_meter(
@@ -559,7 +605,7 @@ def _apply_meter(
     if grid_freq is not None:
         data["grid_frequency"] = grid_freq
 
-    _apply_phases(data, block)
+    _apply_phases(data, block, "meter")
 
     reactive = _read_metric(
         block,
@@ -572,8 +618,19 @@ def _apply_meter(
     _set_make(data, block, "meter_make")
 
 
-def _apply_phases(data: ZapDeviceData, block: dict[str, Any]) -> None:
-    """Copy L1/L2/L3 voltage, current, and power."""
+def _apply_phases(
+    data: ZapDeviceData,
+    block: dict[str, Any],
+    source: str,
+    *,
+    output_positive: bool = False,
+) -> None:
+    """Copy L1/L2/L3 voltage, current, and power.
+
+    ``output_positive`` negates current and power, for a block whose negative
+    values mean supplying.
+    """
+    values = cast(dict[str, Any], data)
     for phase, voltage_field, current_field, power_field in (
         ("l1", "l1_voltage", "l1_current", "l1_power"),
         ("l2", "l2_voltage", "l2_current", "l2_power"),
@@ -582,27 +639,29 @@ def _apply_phases(data: ZapDeviceData, block: dict[str, Any]) -> None:
         voltage = _read_metric(
             block,
             _phase_keys(phase, "V"),
-            f"meter.{phase.upper()}_V",
+            f"{source}.{phase.upper()}_V",
             min_value=0,
             max_value=500,
         )
-        values = cast(dict[str, Any], data)
         if voltage is not None:
             values[voltage_field] = voltage
 
         current = _read_metric(
             block,
             _phase_keys(phase, "A"),
-            f"meter.{phase.upper()}_A",
+            f"{source}.{phase.upper()}_A",
             min_value=-200,
             max_value=200,
         )
         if current is not None:
-            values[current_field] = current
+            # 0 - x keeps a 0 reading +0.
+            values[current_field] = 0.0 - current if output_positive else current
 
-        power = _read_metric(block, _phase_keys(phase, "W"), f"meter.{phase.upper()}_W")
+        power = _read_metric(
+            block, _phase_keys(phase, "W"), f"{source}.{phase.upper()}_W"
+        )
         if power is not None:
-            values[power_field] = power
+            values[power_field] = 0.0 - power if output_positive else power
 
 
 def _apply_ev(data: ZapDeviceData, block: dict[str, Any] | None) -> None:

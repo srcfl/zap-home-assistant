@@ -51,25 +51,23 @@ The integration polls device data every 10 seconds by default. To change this, o
 
 ## Sensors
 
-Each device on the gateway gets the sensors that match what it reports:
+Each device on the gateway gets the sensors below that it has reported a value for. A sensor appears when its first value arrives, without a reload:
 
 | Group | Sensors | Created for |
 |-------|---------|-------------|
 | Power | Power | Every device |
 | Grid meter | Import, Export, Reactive Power, Grid Frequency, L1-L3 Voltage, Current and Power | Grid meters. P1 meters have no Grid Frequency. |
 | Grid power | Grid Power | A grid meter on the same device as v2 solar or an inverter |
-| Solar | Production, Temperature | Solar |
-| Inverter | Inverter Power, Temperature, Grid Frequency | Inverters |
+| Solar | Production, Temperature, MPPT 1 and 2 Voltage, Current and Power | Solar |
+| Inverter | Inverter Power, Temperature, Grid Frequency. L1-L3 Voltage, Current and Power when the device has no grid meter. | Inverters |
 | Battery | Battery (state of charge), Power, Voltage, Current, Temperature, Total Charge, Total Discharge, Upper Limit, Lower Limit, Available Charge, Available Discharge | Batteries |
 | EV charger | EV Charger Power | EV chargers |
 | Gateway | Gateway Uptime, Gateway Temperature, Gateway Memory Usage, Gateway Memory Free, Firmware Version, WiFi Status, WiFi SSID, Signal Strength | Every gateway |
 
-Reactive power and battery available charge and discharge only have values when the device reports them.
-
 Sign conventions:
 
 - **Grid meter:** positive while importing.
-- **Solar:** positive while generating.
+- **Solar:** positive while generating, per MPPT input too.
 - **Battery:** positive while charging, negative while discharging.
 - **Inverter:** positive while the inverter is supplying.
 

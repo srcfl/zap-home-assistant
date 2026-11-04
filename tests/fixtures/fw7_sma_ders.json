@@ -1,0 +1,28 @@
+{
+  "ders": [
+    {
+      "enabled": true,
+      "installed_power_W_dc": 8800,
+      "type": "solar"
+    },
+    {
+      "adjustable": false,
+      "capacity_Wh_dc": 0,
+      "enabled": false,
+      "max_soc_fract": 1,
+      "min_soc_fract": 0.05,
+      "rated_power_W_dc": 0,
+      "type": "battery"
+    },
+    {
+      "enabled": true,
+      "type": "meter"
+    },
+    {
+      "enabled": true,
+      "rated_power_W_ac": 8800,
+      "type": "inverter"
+    }
+  ],
+  "sn": "3000000001"
+}

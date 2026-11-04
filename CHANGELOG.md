@@ -2,6 +2,31 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.1.2] - 2026-11-04
+
+### Added
+
+- PV input sensors: MPPT 1 and 2 Voltage, Current and Power, from the `mppt`
+  array firmware 7.x sends. Current and power are positive while generating.
+- L1-L3 Voltage, Current and Power from the inverter's AC output when the device
+  has no grid meter. Current and power are positive while supplying. A grid
+  meter on the same device keeps these sensors.
+
+### Changed
+
+- A device sensor is created when its first value arrives, without a reload.
+  An inverter with no grid meter no longer gets meter sensors that can never have
+  a value, because `/ders` lists a meter it never reads. A sensor that has had a
+  value stays, and shows unavailable when the value stops.
+- Existing installs: sensors that never had a value stay in Home Assistant until
+  you delete them. They are marked as no longer provided.
+
+### Documentation
+
+- README and test docs rewritten. HACS now shows the corrected install steps.
+- `hacs.json`: minimum Home Assistant version raised from 2024.1.0 to 2025.2.0,
+  the first version that can load this integration.
+
 ## [1.1.1] - 2026-11-02
 
 ### Fixed
