@@ -156,7 +156,7 @@ class ZapDataUpdateCoordinator(DataUpdateCoordinator[ZapDeviceData]):
         """
         self.api = api
         self.serial_number = serial_number
-        # Enabled DER types from the last successful /ders response.
+        # DER types listed in the last successful /ders response.
         # Empty until the first refresh; sensor setup falls back to /devices.
         self.der_types: list[str] = []
 

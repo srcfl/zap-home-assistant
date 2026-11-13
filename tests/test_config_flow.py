@@ -115,6 +115,47 @@ async def test_manual_flow_cannot_connect(hass: HomeAssistant):
     assert result["errors"] == {"base": "cannot_connect"}
 
 
+def _suggested_values(result) -> dict:
+    """Return the values a form shows pre-filled, keyed by field name."""
+    return {
+        str(key.schema): key.description["suggested_value"]
+        for key in result["data_schema"].schema
+        if key.description and "suggested_value" in key.description
+    }
+
+
+async def test_manual_flow_keeps_entered_values_after_error(hass: HomeAssistant):
+    """A failed attempt shows the form again with what the user entered."""
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": config_entries.SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"next_step_id": "manual"},
+    )
+    assert _suggested_values(result) == {}
+
+    mock_api = MagicMock()
+    mock_api.test_connection = AsyncMock(return_value=False)
+
+    with patch(
+        "custom_components.sourceful_zap.config_flow.ZapApiClient",
+        return_value=mock_api,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_HOST: "http://192.168.1.123/", CONF_POLLING_INTERVAL: 30},
+        )
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect"}
+    # The host comes back cleaned up, as it was tried
+    assert _suggested_values(result) == {
+        CONF_HOST: "192.168.1.123",
+        CONF_POLLING_INTERVAL: 30,
+    }
+
+
 async def test_manual_flow_connection_exception(hass: HomeAssistant):
     """Test manual flow with connection exception."""
     result = await hass.config_entries.flow.async_init(

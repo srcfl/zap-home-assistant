@@ -273,8 +273,8 @@ def test_null_dc_uses_ac_and_inverter_frequency_fills_a_meter_without_hz():
     assert "inverter_power" not in data
 
 
-def test_disabled_der_and_non_numeric_values_are_ignored():
-    """Disabled DER entries and garbage numbers do not become sensors."""
+def test_unpublished_der_is_listed_and_non_numeric_values_are_ignored():
+    """An unpublished DER still counts; its rating and garbage numbers do not."""
     ders = {
         "ders": [
             "nope",
@@ -287,7 +287,8 @@ def test_disabled_der_and_non_numeric_values_are_ignored():
         "meter": {"W_ac": "not-a-number", "l1_A_ac": 1e7, "l1_V_ac": 230},
     }
     data, der_types = parse_device_data(payload, ders, "SN")
-    assert der_types == ["meter"]
+    # `enabled` is the publish flag; the DER is still on the device.
+    assert der_types == ["solar", "meter"]
     assert "power" not in data
     assert "l1_current" not in data
     assert data["l1_voltage"] == 230.0
@@ -516,6 +517,33 @@ async def test_sma_without_meter_gets_only_sensors_with_values(hass, mock_config
     assert (
         get_state(hass, f"{prefix}_mppt1_power").name == "Sma 3000000001 MPPT 1 Power"
     )
+
+
+async def test_unpublished_solar_still_gets_its_sensors(hass, mock_config_entry):
+    """`enabled: false` only stops the Zap publishing a DER to the backend.
+
+    A DER the Zap detects starts unpublished, and /data/json carries it anyway,
+    so its sensors must not depend on the flag.
+    """
+    ders = deepcopy(SMA_DERS)
+    for der in ders["ders"]:
+        if der["type"] == "solar":
+            der["enabled"] = False
+    api = _api([{**_sma_device(), "ders": ders["ders"]}], deepcopy(SMA_DATA), ders)
+    await setup_integration(hass, mock_config_entry, api)
+
+    assert _registered_device_sensors(hass) == {
+        "power",
+        "energy_production",
+        "mppt1_voltage",
+        "mppt1_current",
+        "mppt1_power",
+        "mppt2_voltage",
+        "mppt2_current",
+        "mppt2_power",
+    }
+    prefix = f"sourceful_zap_{GATEWAY}_sma_{SMA_SN}"
+    assert get_state(hass, f"{prefix}_energy_production").state == "21686913.0"
 
 
 async def test_sma_inverter_block_after_a_firmware_update_adds_sensors(

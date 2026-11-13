@@ -179,10 +179,10 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 return self.async_create_entry(title=info["title"], data=user_input)
 
-        # Manual entry form
+        # Manual entry form. After a failed attempt it shows what was entered.
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_HOST, default=""): str,
+                vol.Required(CONF_HOST): str,
                 vol.Optional(
                     CONF_POLLING_INTERVAL,
                     default=DEFAULT_POLLING_INTERVAL,
@@ -191,7 +191,9 @@ class ZapEnergyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
         return self.async_show_form(
-            step_id="manual", data_schema=data_schema, errors=errors
+            step_id="manual",
+            data_schema=self.add_suggested_values_to_schema(data_schema, user_input),
+            errors=errors,
         )
 
     async def async_step_scan(

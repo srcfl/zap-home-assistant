@@ -2,6 +2,17 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.1.3] - 2026-11-13
+
+### Fixed
+
+- A DER the Zap does not publish to the backend gets its sensors. `enabled` in
+  `/ders` is the Zap's publish flag, not whether it reads the DER, and a DER the
+  Zap detects starts unpublished. A freshly added inverter therefore showed no
+  PV sensors. Sensors are still created only once a value arrives.
+- The manual setup form keeps the IP address and polling interval after a
+  failed attempt, so a typo can be fixed without typing everything again.
+
 ## [1.1.2] - 2026-11-04
 
 ### Added
