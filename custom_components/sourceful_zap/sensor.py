@@ -550,7 +550,9 @@ async def async_setup_entry(
     for device in devices:
         serial = device.get("serial_number")
         ders = device.get("ders", [])
-        der_types = [der.get("type") for der in ders if der.get("enabled", True)]
+        # `enabled` is the Zap's publish-to-backend flag, not whether the DER
+        # is read, so a DER the Zap does not publish still gets its sensors.
+        der_types = [der.get("type") for der in ders if der.get("type")]
         # Get device profile/model for entity naming
         profile = device.get("model", "").replace(" ", "_").lower()
         device_info_map[serial] = {

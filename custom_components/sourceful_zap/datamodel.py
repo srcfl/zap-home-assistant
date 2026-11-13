@@ -239,8 +239,13 @@ def is_data_model_v2(payload: dict[str, Any]) -> bool:
     return False
 
 
-def enabled_der_types(device_ders_response: dict[str, Any] | None) -> list[str]:
-    """Return enabled DER type names from a ``/ders`` response."""
+def der_types_from_ders(device_ders_response: dict[str, Any] | None) -> list[str]:
+    """Return the DER type names a ``/ders`` response lists.
+
+    A DER's ``enabled`` flag only says whether the Zap publishes it to the
+    backend. ``/data/json`` carries the DER either way, so the flag does not
+    hide anything here.
+    """
     if not device_ders_response:
         return []
     ders = device_ders_response.get("ders")
@@ -251,9 +256,8 @@ def enabled_der_types(device_ders_response: dict[str, Any] | None) -> list[str]:
         if not isinstance(der, dict):
             continue
         der_type = der.get("type")
-        if not der_type or der.get("enabled", True) is False:
-            continue
-        types.append(str(der_type))
+        if der_type:
+            types.append(str(der_type))
     return types
 
 
@@ -264,7 +268,7 @@ def parse_device_data(
 ) -> tuple[ZapDeviceData, list[str]]:
     """Parse one ``/data/json`` body plus its ``/ders`` metadata.
 
-    Returns the sensor snapshot and the enabled DER types from ``/ders``.
+    Returns the sensor snapshot and the DER types ``/ders`` lists.
     """
     data: ZapDeviceData = {"serial_number": serial_number}
     if not isinstance(device_data, dict):
@@ -291,7 +295,7 @@ def parse_device_data(
     _apply_der_metadata(data, device_ders_response)
     _apply_last_harvest(data, device_data)
 
-    return data, enabled_der_types(device_ders_response)
+    return data, der_types_from_ders(device_ders_response)
 
 
 def _block(payload: dict[str, Any], *keys: str) -> dict[str, Any] | None:
@@ -688,6 +692,8 @@ def _apply_der_metadata(
             continue
         der_type = der.get("type")
 
+        # Only a published DER sets the rating: an entry the Zap lists but
+        # does not publish can hold zeroed config, like an SMA's battery.
         if der.get("enabled") and data.get("rated_power") is None:
             rated = _read_metric(der, _DER_RATED_KEYS, "der.rated_power", min_value=0)
             if rated is not None:
