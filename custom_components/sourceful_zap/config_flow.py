@@ -19,6 +19,7 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .api import ZapApiClient, ZapConnectionError, extract_gateway_serial
 from .const import (
+    CONF_DASHBOARD,
     CONF_POLLING_INTERVAL,
     DEFAULT_API_PATH,
     DEFAULT_POLLING_INTERVAL,
@@ -594,19 +595,27 @@ class ZapEnergyOptionsFlowHandler(
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        entry = self.config_entry
+        # Show what is in use: the option, or the value from when the Zap was added
+        polling_interval = entry.options.get(
+            CONF_POLLING_INTERVAL,
+            entry.data.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL),
+        )
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Optional(
                         CONF_POLLING_INTERVAL,
-                        default=self.config_entry.options.get(
-                            CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL
-                        ),
+                        default=polling_interval,
                     ): vol.All(
                         cv.positive_int,
                         vol.Range(min=MIN_POLLING_INTERVAL),
                     ),
+                    vol.Optional(
+                        CONF_DASHBOARD,
+                        default=entry.options.get(CONF_DASHBOARD, True),
+                    ): bool,
                 }
             ),
         )

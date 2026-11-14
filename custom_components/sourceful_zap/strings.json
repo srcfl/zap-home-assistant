@@ -46,9 +46,10 @@
     "step": {
       "init": {
         "title": "Sourceful Zap Options",
-        "description": "Configure polling interval for data updates",
+        "description": "How often the Zap is read, and whether its dashboard is in the sidebar",
         "data": {
-          "polling_interval": "Polling Interval (seconds)"
+          "polling_interval": "Polling Interval (seconds)",
+          "dashboard": "Show the Sourceful Zap dashboard in the sidebar"
         }
       }
     }

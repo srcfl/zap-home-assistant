@@ -19,6 +19,7 @@ from custom_components.sourceful_zap.config_flow import (
     validate_input,
 )
 from custom_components.sourceful_zap.const import (
+    CONF_DASHBOARD,
     CONF_POLLING_INTERVAL,
     DEFAULT_POLLING_INTERVAL,
     DOMAIN,
@@ -453,7 +454,33 @@ async def test_options_flow(hass: HomeAssistant, mock_config_entry, mock_zap_api
     )
 
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert result["data"] == {CONF_POLLING_INTERVAL: 60}
+    assert result["data"] == {CONF_POLLING_INTERVAL: 60, CONF_DASHBOARD: True}
+
+
+async def test_options_flow_shows_values_in_use(hass: HomeAssistant, mock_zap_api):
+    """The form starts from the stored interval and the dashboard switch."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.100", CONF_POLLING_INTERVAL: 45},
+        options={CONF_DASHBOARD: False},
+        unique_id="zap-gateway-12345",
+    )
+    entry.add_to_hass(hass)
+    with patch(
+        "custom_components.sourceful_zap.ZapApiClient", return_value=mock_zap_api
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    defaults = {str(key.schema): key.default() for key in result["data_schema"].schema}
+    assert defaults == {CONF_POLLING_INTERVAL: 45, CONF_DASHBOARD: False}
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={CONF_DASHBOARD: True}
+    )
+    assert result["data"] == {CONF_POLLING_INTERVAL: 45, CONF_DASHBOARD: True}
 
 
 async def test_options_flow_default_values(
