@@ -26,10 +26,10 @@ tests/
 ### Run All Tests
 ```bash
 pytest tests/
-node --test tests/frontend/
+node --test tests/frontend/*.test.mjs
 ```
 
-The Node tests need Node 20 or newer and no packages.
+The Node tests need Node 20 or newer and no packages. Name the files as above: Node 22 and newer do not take a directory after `--test`.
 
 ### Run Specific Test File
 ```bash

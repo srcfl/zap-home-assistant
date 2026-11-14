@@ -228,7 +228,7 @@ source venv/bin/activate
 pip install -r requirements_test.txt
 
 pytest tests/
-node --test tests/frontend/
+node --test tests/frontend/*.test.mjs
 ```
 
 `zap-cards.js` is plain JavaScript that the browser loads as it is. The Node tests cover its logic: scales, units, data tiers and the dashboard the strategy builds. See [tests/README.md](tests/README.md) for more on the test suite.
