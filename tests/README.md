@@ -14,6 +14,9 @@ tests/
 ├── test_api.py                 # API client tests
 ├── test_coordinator.py         # Data coordinator tests
 ├── test_datamodel_v2.py        # Firmware 7.x data model v2 parsing
+├── test_dashboard.py           # Cards and dashboard added to the frontend
+├── frontend/
+│   └── zap-cards.test.mjs      # Logic in frontend/zap-cards.js, run with Node
 ├── fixtures/                   # Firmware 7.x payloads
 └── README.md                   # This file
 ```
@@ -23,7 +26,10 @@ tests/
 ### Run All Tests
 ```bash
 pytest tests/
+node --test tests/frontend/
 ```
+
+The Node tests need Node 20 or newer and no packages.
 
 ### Run Specific Test File
 ```bash
@@ -56,6 +62,8 @@ pytest tests/ -v -s
 | File | Covers |
 |------|--------|
 | `test_config_flow.py` | Menu, manual entry, network scan, zeroconf discovery, options flow and input validation |
+| `test_dashboard.py` | Serving the cards, adding and removing the sidebar dashboard, address conflicts, the option, and failures that must not stop the sensors |
+| `frontend/zap-cards.test.mjs` | Axis scales and ticks, unit conversion, which data a range reads, bar buckets, and the dashboard the strategy builds for a meter, a hybrid inverter and two Zaps |
 | `test_api.py` | API client requests, response formats and error handling |
 | `test_coordinator.py` | Data updates, connection status, partial data and value conversion |
 | `test_sensor.py` | Sensor creation per DER type, state, availability and device info |

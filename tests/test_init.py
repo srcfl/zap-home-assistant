@@ -181,3 +181,27 @@ async def test_setup_survives_system_info_error_during_migration(
         await hass.async_block_till_done()
 
     assert entry.unique_id == "INV001"
+
+
+async def test_polling_interval_option_wins_over_stored_value(
+    hass: HomeAssistant, mock_zap_api
+):
+    """The interval set in the options flow replaces the one from setup."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "192.168.1.100", CONF_POLLING_INTERVAL: 10},
+        options={CONF_POLLING_INTERVAL: 60},
+        unique_id="zap-gateway-12345",
+    )
+    entry.add_to_hass(hass)
+
+    with patch(
+        "custom_components.sourceful_zap.ZapApiClient", return_value=mock_zap_api
+    ):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    coordinators = hass.data[DOMAIN][entry.entry_id]["coordinators"]
+    assert coordinators
+    for coordinator in coordinators.values():
+        assert coordinator.update_interval.total_seconds() == 60

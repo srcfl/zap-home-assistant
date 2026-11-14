@@ -49,6 +49,16 @@ GET /api/devices/{sn}/ders         # DER metadata
 
 `datamodel.py` detects the data model per response. Firmware 2.3.x sends v1 and firmware 7.x sends v2.
 
+## Frontend
+
+`dashboard.py` serves `frontend/zap-cards.js` at `/sourceful_zap/zap-cards.js` and loads it in the frontend. The file is plain JavaScript with no dependencies and no build step. It defines four cards and the dashboard strategy `custom:sourceful-zap`, which builds the dashboard in the browser from the sensors' translation keys, not from entity IDs.
+
+`dashboard.py` also adds a read-only dashboard to the sidebar that uses the strategy. That part uses Home Assistant's dashboard internals (`hass.data["lovelace"].dashboards`), so every step is guarded: a failure is logged and the sensors still load.
+
+- Test the logic with `node --test tests/frontend/`. Test the look in a real Home Assistant, in light and dark and at phone width.
+- `VERSION` in `zap-cards.js` must match `manifest.json`. A test checks it.
+- Home Assistant Core does not take integrations with their own frontend files. If Core inclusion is pursued, the cards and the dashboard move to a separate HACS frontend repository.
+
 ## Translations
 
 Custom integrations load names from `translations/en.json`. `strings.json` is only read when Home Assistant builds core. Keep the two files identical, or sensors fall back to device class names.

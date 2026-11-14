@@ -8,6 +8,7 @@ DOMAIN: Final = "sourceful_zap"
 # Configuration keys
 CONF_HOST: Final = "host"
 CONF_POLLING_INTERVAL: Final = "polling_interval"
+CONF_DASHBOARD: Final = "dashboard"
 
 # Default values
 DEFAULT_API_PATH: Final = "/api"

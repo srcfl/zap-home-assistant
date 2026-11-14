@@ -2,6 +2,31 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.2.0] - 2026-11-14
+
+### Added
+
+- A **Sourceful Zap** dashboard in the sidebar, built in the browser from the
+  sensors of your Zap. Each Zap gets a view and each device a section: power,
+  energy bars and per-phase charts for a grid meter, and charts for solar, a
+  battery, an inverter and an EV charger where you have them. Reload the browser
+  page after updating so the cards load.
+- One time range for the whole dashboard: 1 h, 6 h, 24 h, 7 d, 30 d or a custom
+  from and to. Pointing at one chart shows the values in all of them.
+- Four cards for your own dashboards: `custom:zap-stat-card`,
+  `custom:zap-chart-card`, `custom:zap-range-picker` and
+  `custom:zap-heading-card`. They work with any entity and follow your theme.
+- The dashboard as a choice under **Settings → Dashboards → Add dashboard**, so
+  you can make a copy and take control of it.
+- An option to keep the dashboard out of the sidebar: **Configure → Show the
+  Sourceful Zap dashboard in the sidebar**.
+
+### Fixed
+
+- The polling interval set under **Configure** is used. It was ignored for a
+  Zap added by IP address or by a network scan, which kept the interval from
+  when it was added.
+
 ## [1.1.3] - 2026-11-13
 
 ### Fixed

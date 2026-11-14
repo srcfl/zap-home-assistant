@@ -56,3 +56,20 @@ jobs:
           file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check syntax
+        run: node --check custom_components/sourceful_zap/frontend/zap-cards.js
+
+      - name: Run frontend tests
+        run: node --test tests/frontend/

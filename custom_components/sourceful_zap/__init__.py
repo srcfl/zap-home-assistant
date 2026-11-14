@@ -20,6 +20,11 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import ZapDataUpdateCoordinator, ZapGatewayCoordinator
+from .dashboard import (
+    async_register_frontend,
+    async_unregister_frontend,
+    async_update_dashboard,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,10 +34,11 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Zap Energy from a config entry."""
     host = entry.data[CONF_HOST]
-    # Polling interval from data (config flow) or options (for backwards compatibility)
-    polling_interval = entry.data.get(
+    # The options flow changes the interval, so options win over the value
+    # the config flow stored when the Zap was added.
+    polling_interval = entry.options.get(
         CONF_POLLING_INTERVAL,
-        entry.options.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL),
+        entry.data.get(CONF_POLLING_INTERVAL, DEFAULT_POLLING_INTERVAL),
     )
 
     # Create API client with hardcoded /api path
@@ -135,6 +141,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Cards for the frontend, and the dashboard in the sidebar
+    await async_register_frontend(hass)
+    async_update_dashboard(hass)
+
     # Register options update listener
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
@@ -170,6 +180,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
+        async_update_dashboard(hass)
+        if not hass.data[DOMAIN]:
+            async_unregister_frontend(hass)
 
     return unload_ok
 
