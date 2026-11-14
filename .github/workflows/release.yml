@@ -36,7 +36,7 @@ jobs:
       - name: Run frontend tests
         run: |
           node --check custom_components/sourceful_zap/frontend/zap-cards.js
-          node --test tests/frontend/
+          node --test tests/frontend/*.test.mjs
 
       - name: Get version from tag
         id: get_version

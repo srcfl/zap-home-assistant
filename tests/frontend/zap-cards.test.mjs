@@ -1,5 +1,5 @@
 // Tests for the logic in zap-cards.js that needs no browser.
-// Run with: node --test tests/frontend/
+// Run with: node --test tests/frontend/*.test.mjs
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
