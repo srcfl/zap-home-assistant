@@ -13,6 +13,7 @@ import {
   hoursOf,
   meanSource,
   niceScale,
+  register,
   seriesColor,
   splitGaps,
   sumBuckets,
@@ -341,4 +342,94 @@ test("no sensors gives a note instead of an empty dashboard", () => {
   assert.equal(board.views.length, 1);
   assert.equal(board.views[0].cards[0].type, "markdown");
   assert.match(board.views[0].cards[0].content, /Sourceful Zap/);
+});
+
+/* A pretend element registry, like the browser's. */
+class FakeRegistry {
+  constructor() {
+    this.defined = new Map();
+    this.waiting = new Map();
+  }
+
+  get(tag) {
+    return this.defined.get(tag);
+  }
+
+  define(tag, cls) {
+    if (this.defined.has(tag)) throw new Error(`${tag} is already defined`);
+    this.defined.set(tag, cls);
+    for (const resolve of this.waiting.get(tag) || []) resolve(cls);
+    this.waiting.delete(tag);
+  }
+
+  whenDefined(tag) {
+    if (this.defined.has(tag)) return Promise.resolve(this.defined.get(tag));
+    return new Promise((resolve) => {
+      this.waiting.set(tag, [...(this.waiting.get(tag) || []), resolve]);
+    });
+  }
+
+  tags() {
+    return [...this.defined.keys()].sort();
+  }
+}
+
+const ELEMENT_TAGS = [
+  "ll-strategy-dashboard-sourceful-zap",
+  "zap-chart-card",
+  "zap-heading-card",
+  "zap-range-picker",
+  "zap-stat-card",
+];
+
+test("register defines the cards and the strategy once", () => {
+  const scope = { customElements: new FakeRegistry() };
+  register(scope);
+  register(scope);
+  assert.deepEqual(scope.customElements.tags(), ELEMENT_TAGS);
+  assert.deepEqual(scope.customCards.map((card) => card.type).sort(), ELEMENT_TAGS.slice(1));
+  assert.deepEqual(scope.customStrategies.map((item) => `${item.strategyType}:${item.type}`), ["dashboard:sourceful-zap"]);
+});
+
+test("register leaves a name that another copy has, and does nothing without a registry", () => {
+  const taken = class {};
+  const scope = { customElements: new FakeRegistry() };
+  scope.customElements.define("zap-stat-card", taken);
+  register(scope);
+  assert.equal(scope.customElements.get("zap-stat-card"), taken);
+  assert.deepEqual(scope.customElements.tags(), ELEMENT_TAGS);
+  const bare = {};
+  register(bare);
+  assert.deepEqual(bare, {});
+});
+
+test("cards defined before Home Assistant swaps the registry are defined again in the new one", async () => {
+  // The file can run before Home Assistant's own scripts. Home Assistant then
+  // replaces window.customElements, and its new registry starts empty.
+  const first = new FakeRegistry();
+  globalThis.window = globalThis;
+  globalThis.customElements = first;
+  const info = console.info;
+  console.info = () => {};
+  try {
+    await import("../../custom_components/sourceful_zap/frontend/zap-cards.js?registry-swap");
+    assert.deepEqual(first.tags(), ELEMENT_TAGS);
+
+    const second = new FakeRegistry();
+    globalThis.customElements = second;
+    assert.deepEqual(second.tags(), []);
+    // Home Assistant defines its root element, which the first registry sees too.
+    first.define("home-assistant", class {});
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.deepEqual(second.tags(), ELEMENT_TAGS);
+    assert.equal(globalThis.customCards.length, 4);
+    assert.equal(globalThis.customStrategies.length, 1);
+  } finally {
+    console.info = info;
+    delete globalThis.window;
+    delete globalThis.customElements;
+    delete globalThis.customCards;
+    delete globalThis.customStrategies;
+  }
 });

@@ -13,7 +13,7 @@
  * Card options are described in the README.
  */
 
-export const VERSION = "1.2.0";
+export const VERSION = "1.2.1";
 
 const DOMAIN = "sourceful_zap";
 const MINUTE = 60e3;
@@ -2108,23 +2108,41 @@ class ZapDashboardStrategy extends Base {
 
 /* ------------------------------------------------------------------ */
 
-if (typeof customElements !== "undefined" && typeof window !== "undefined") {
-  const cards = [
-    ["zap-stat-card", ZapStatCard, "Zap stat card", "A value, a second line and a sparkline."],
-    ["zap-chart-card", ZapChartCard, "Zap chart card", "Lines, an area or energy bars over time."],
-    ["zap-range-picker", ZapRangePicker, "Zap range picker", "A title and one time range for every Zap card of the view."],
-    ["zap-heading-card", ZapHeadingCard, "Zap heading card", "A title for a group of Zap cards."],
-  ];
-  window.customCards = window.customCards || [];
-  for (const [tag, cls, name, description] of cards) {
-    if (customElements.get(tag)) continue;
-    customElements.define(tag, cls);
-    window.customCards.push({ type: tag, name, description, preview: false });
+const CARDS = [
+  ["zap-stat-card", ZapStatCard, "Zap stat card", "A value, a second line and a sparkline."],
+  ["zap-chart-card", ZapChartCard, "Zap chart card", "Lines, an area or energy bars over time."],
+  ["zap-range-picker", ZapRangePicker, "Zap range picker", "A title and one time range for every Zap card of the view."],
+  ["zap-heading-card", ZapHeadingCard, "Zap heading card", "A title for a group of Zap cards."],
+];
+const STRATEGY_TAG = "ll-strategy-dashboard-sourceful-zap";
+
+/*
+ * Define the cards and the strategy in the page's element registry and list
+ * them for Home Assistant's pickers. Safe to call more than once: it only adds
+ * what the registry and the lists do not have.
+ */
+export function register(scope = globalThis) {
+  const registry = scope.customElements;
+  if (!registry) return;
+  const define = (tag, cls) => {
+    if (registry.get(tag)) return;
+    try {
+      registry.define(tag, cls);
+    } catch (err) {
+      // Another copy of this file has the name.
+    }
+  };
+  scope.customCards = scope.customCards || [];
+  for (const [tag, cls, name, description] of CARDS) {
+    define(tag, cls);
+    if (!scope.customCards.some((card) => card.type === tag)) {
+      scope.customCards.push({ type: tag, name, description, preview: false });
+    }
   }
-  if (!customElements.get("ll-strategy-dashboard-sourceful-zap")) {
-    customElements.define("ll-strategy-dashboard-sourceful-zap", ZapDashboardStrategy);
-    window.customStrategies = window.customStrategies || [];
-    window.customStrategies.push({
+  define(STRATEGY_TAG, ZapDashboardStrategy);
+  scope.customStrategies = scope.customStrategies || [];
+  if (!scope.customStrategies.some((item) => item.type === "sourceful-zap" && item.strategyType === "dashboard")) {
+    scope.customStrategies.push({
       type: "sourceful-zap",
       strategyType: "dashboard",
       name: "Sourceful Zap",
@@ -2132,5 +2150,18 @@ if (typeof customElements !== "undefined" && typeof window !== "undefined") {
       documentationURL: "https://github.com/srcfl/zap-home-assistant#dashboard",
     });
   }
+}
+
+/*
+ * Home Assistant replaces `window.customElements` with a registry of its own
+ * while it starts, and that registry does not know the elements defined before.
+ * This file loads next to Home Assistant's own scripts, so either can run
+ * first. Register now, and again when Home Assistant has defined its root
+ * element, which it does in the registry it keeps.
+ */
+if (typeof customElements !== "undefined" && typeof window !== "undefined") {
+  const atLoad = window.customElements;
+  register(window);
+  atLoad.whenDefined("home-assistant").then(() => register(window));
   console.info(`Sourceful Zap cards ${VERSION}`);
 }

@@ -2,6 +2,18 @@
 
 All notable changes to the Sourceful Zap Home Assistant integration.
 
+## [1.2.1] - 2026-11-16
+
+### Fixed
+
+- The dashboard sometimes stayed empty with "Timeout waiting for strategy
+  element ll-strategy-dashboard-sourceful-zap", and your own dashboards showed
+  "Custom element doesn't exist: zap-…". The cards could register before Home
+  Assistant had finished starting in the browser, and were then lost. It
+  happened now and then, most often on a slower Home Assistant host or on the
+  first load after a restart. The cards now register again once Home Assistant
+  is ready.
+
 ## [1.2.0] - 2026-11-14
 
 ### Added
