@@ -241,7 +241,7 @@ node --test tests/frontend/*.test.mjs
 
 ## Contributing
 
-Join the discussion on [Discord](https://discord.com/invite/srcful).
+Open an issue or pull request on this repository.
 
 ## License
 
